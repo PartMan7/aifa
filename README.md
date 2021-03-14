@@ -4,7 +4,7 @@ AIFA project.
 
 ## Notes
 
-We'll probably be doing #1 (unless someone wants to do one of the others?)
+We're going with #3.
 
 
 ### Work Delegation
