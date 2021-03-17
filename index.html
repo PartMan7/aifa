@@ -65,8 +65,8 @@
 			}
 		</style>
 
-		<!--<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-core.min.js"></script>-->
-		<!--<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-graph.min.js"></script>-->
+		<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-core.min.js"></script>
+		<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-graph.min.js"></script>
 
 		<script>
 			let _init = false;
@@ -77,9 +77,9 @@
 				EVs: {}
 			}
 
-			/* anychart.onDocumentLoad(() => {
+			anychart.onDocumentLoad(() => {
 				_init = true;
-			}); */
+			});
 
 			function setnodes () {
 				let txt, num = parseInt(txt = document.getElementById('nodenum').value);
@@ -97,14 +97,12 @@
 			}
 
 			function generate () {
-				// if (!_init) return alert(`Loading graph scripts.`); anychart
+				if (!_init) return alert(`Loading graph scripts.`);
 
 				let inputs = document.getElementsByName('edge');
-
 				let data = {
 					nodes: info.nodes.map(node => ({id: node}))
 				}
-
 				info.edges = [];
 
 				for (let i = 0; i < inputs.length; i++) {
@@ -116,10 +114,9 @@
 					let coords = edge.id.split('|');
 					info.edges.push({ from: coords[0], to: coords[1], weight: String(val) });
 				}
-
 				data.edges = info.edges;
 
-				/* const chart = anychart.graph(data);
+				const chart = anychart.graph(data);
 				chart.title('Map');
 
 				chart.nodes().labels().enabled(true);
@@ -136,7 +133,7 @@
 				chart.edges().tooltip().format("{%weight} (Between {%from} and {%to})");
 
 				document.getElementById('container').innerHTML = '';
-				chart.container('container').draw(); */
+				chart.container('container').draw();
 
 				document.getElementById('vehicles').style.visibility = 'visible';
 				info.EVs = {};
