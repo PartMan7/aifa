@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<meta charset="utf8">
+
+<html>
+	<head>
+		<title>AIFA - #3</title>
+		<style>
+			html, body {
+				height: 100%;
+				width: 100%;
+				margin: 0;
+				padding: 0;
+			}
+
+			#container {
+				height: 90%;
+				width: 40%;
+				margin: 0;
+				padding: 0;
+				display: inline-block;
+				float: left;
+			}
+
+			#controls {
+				width: 60%;
+				height: 90%;
+				display: inline-block;
+				margin-top: 3%;
+				float: left;
+				text-align: center;
+				font-size: 0.8em;
+				overflow-x: scroll;
+				overflow-y: scroll;
+			}
+
+			label {
+				display: inline-block;
+				font-size: 0.8em;
+			}
+
+			input[name=edge] {
+				width: 20px;
+				display: inline-block;
+				font-size: 0.8em;
+			}
+
+			input#nodenum {
+				width: 15px;
+			}
+		</style>
+
+		<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-core.min.js"></script>
+		<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-graph.min.js"></script>
+
+		<script>
+			let _init = false;
+
+			let info = {
+				nodes: [],
+				edges: []
+			}
+
+			anychart.onDocumentLoad(() => {
+				_init = true;
+			});
+
+			function setnodes () {
+				let txt, num = parseInt(txt = document.getElementById('nodenum').value);
+				if (isNaN(num) || num < 1) return alert(`Invalid number of nodes (${txt})`);
+				info.nodes = [];
+				for (let i = 0; i < num; i++) info.nodes.push(`V${i + 1}`);
+				let allEdges = [];
+				for (let i = 1; i <= num; i++) for (let j = i + 1; j <= num; j++) allEdges.push([i, j]);
+				document.getElementById('edges').innerHTML = allEdges.map(bw => `<label>V${bw[0]}-V${bw[1]}</label>: <input type="text" name="edge" id="V${bw[0]}|V${bw[1]}" value="-"  placeholder="Length" required />`).join('<br />');
+				document.getElementById('edgestitle').hidden = false;
+				document.getElementById('buttons').hidden = false;
+			}
+
+			function generate () {
+				if (!_init) return alert(`Loading graph scripts.`);
+
+				let inputs = document.getElementsByName('edge');
+
+				let data = {
+					nodes: info.nodes.map(node => ({id: node}))
+				}
+
+				info.edges = [];
+
+				for (let i = 0; i < inputs.length; i++) {
+					const edge = inputs[i];
+					if (!edge.value) return;
+					if (edge.value === '-') continue;
+					const val = parseInt(edge.value);
+					if (isNaN(val)) return alert(`[${edge.id.split('|').join('-')}] ${edge.value} is not a valid number.`);
+					let coords = edge.id.split('|');
+					info.edges.push({ from: coords[0], to: coords[1], weight: String(val) });
+				}
+
+				data.edges = info.edges;
+
+				const chart = anychart.graph(data);
+				chart.title('Map');
+
+				chart.nodes().labels().enabled(true);
+				chart.nodes().labels().format("{%id}");
+				chart.nodes().labels().fontSize(12);
+				chart.nodes().labels().fontWeight(600);
+				chart.nodes().labels().fontColor("#00bfa5");
+
+				chart.edges().labels().enabled(true);
+				chart.edges().labels().format("{%weight}");
+				chart.edges().labels().fontSize(10);
+				chart.edges().labels().fontWeight(600);
+				chart.edges().labels().fontColor("#00bfa5");
+				chart.edges().tooltip().format("{%weight} (Between {%from} and {%to})");
+
+				document.getElementById('container').innerHTML = '';
+				chart.container('container').draw();
+
+				document.getElementById('runbutton').hidden = false;
+			}
+
+			function run () {
+				let inputs = document.getElementsByName('edge');
+				let data = {
+					nodes: [
+						{id: 'V1'},
+						{id: 'V2'},
+						{id: 'V3'},
+						{id: 'V4'},
+						{id: 'V5'},
+						{id: 'V6'},
+						{id: 'V7'},
+						{id: 'V8'}
+					],
+					edges: []
+				}
+				for (let i = 0; i < 12; i++) {
+					const edge = inputs[i];
+					if (!edge.value) return;
+					const val = parseInt(edge.value);
+					if (isNaN(val)) return alert(`[${edge.id.split('|').join('-')}] ${edge.value} is not a valid number.`);
+					let coords = edge.id.split('|');
+					data.edges.push({ from: coords[0], to: coords[1], weight: val });
+				}
+
+				const graph = {};
+				data.nodes.forEach(node => graph[node.id] = {});
+				data.edges.forEach(edge => {
+					graph[edge.from][edge.to] = edge.weight;
+					graph[edge.to][edge.from] = edge.weight;
+				});
+
+				return console.log(JSON.stringify(graph));
+			}
+		</script>
+
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="controls">
+			<h2>Nodes</h2>
+			How many nodes does the graph have? <input type="text" id="nodenum" value="5" placeholder="#" required />&nbsp;&nbsp;<button onclick="setnodes()">Set</button>
+			<br />
+			<h2 id="edgestitle" hidden>Edges</h2>
+			<div id="edges"></div>
+			<br />
+			<span id="buttons" hidden><button name="Generate!" onclick="generate()">Generate map!</button>&nbsp;&nbsp;<button id="runbutton" name="Run!" onclick="run()" hidden>Run!</button></span>
+		</div>
+	</body>
+</html>
