@@ -21,8 +21,8 @@
 				float: left;
 			}
 
-			#controls {
-				width: 60%;
+			#graph, #vehicles {
+				width: 30%;
 				height: 90%;
 				display: inline-block;
 				margin-top: 3%;
@@ -38,31 +38,48 @@
 				font-size: 0.8em;
 			}
 
-			input[name=edge] {
+			input[name=edge], input[name=ev], input.inputcell {
 				width: 20px;
 				display: inline-block;
 				font-size: 0.8em;
 			}
 
-			input#nodenum {
+			input.nums {
+				width: 25px;
+				display: inline-block;
+				font-size: 0.8em;
+			}
+
+			input#nodenum, input#evnum {
 				width: 15px;
+			}
+
+			fieldset {
+				width: 60%;
+				margin: auto;
+			}
+
+			div.inline {
+				display: inline-block;
+				margin-left: margin-right: 5px;
 			}
 		</style>
 
-		<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-core.min.js"></script>
-		<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-graph.min.js"></script>
+		<!--<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-core.min.js"></script>-->
+		<!--<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-graph.min.js"></script>-->
 
 		<script>
 			let _init = false;
 
 			let info = {
 				nodes: [],
-				edges: []
+				edges: [],
+				EVs: {}
 			}
 
-			anychart.onDocumentLoad(() => {
+			/* anychart.onDocumentLoad(() => {
 				_init = true;
-			});
+			}); */
 
 			function setnodes () {
 				let txt, num = parseInt(txt = document.getElementById('nodenum').value);
@@ -71,13 +88,16 @@
 				for (let i = 0; i < num; i++) info.nodes.push(`V${i + 1}`);
 				let allEdges = [];
 				for (let i = 1; i <= num; i++) for (let j = i + 1; j <= num; j++) allEdges.push([i, j]);
-				document.getElementById('edges').innerHTML = allEdges.map(bw => `<label>V${bw[0]}-V${bw[1]}</label>: <input type="text" name="edge" id="V${bw[0]}|V${bw[1]}" value="-"  placeholder="Length" required />`).join('<br />');
+				document.getElementById('edges').innerHTML = allEdges.map(bw => `<label for="V${bw[0]}|V${bw[1]}">V${bw[0]}-V${bw[1]}</label>: <input type="text" name="edge" id="V${bw[0]}|V${bw[1]}" value="-"  placeholder="Length" required />`).join('<br />');
 				document.getElementById('edgestitle').hidden = false;
-				document.getElementById('buttons').hidden = false;
+				document.getElementById('graphbuttons').hidden = false;
+				document.getElementById('vehicles').style.visibility = 'hidden';
+				document.getElementById('vehtitle').hidden = true;
+				document.getElementById('evbuttons').hidden = true;
 			}
 
 			function generate () {
-				if (!_init) return alert(`Loading graph scripts.`);
+				// if (!_init) return alert(`Loading graph scripts.`); anychart
 
 				let inputs = document.getElementsByName('edge');
 
@@ -99,7 +119,7 @@
 
 				data.edges = info.edges;
 
-				const chart = anychart.graph(data);
+				/* const chart = anychart.graph(data);
 				chart.title('Map');
 
 				chart.nodes().labels().enabled(true);
@@ -116,26 +136,27 @@
 				chart.edges().tooltip().format("{%weight} (Between {%from} and {%to})");
 
 				document.getElementById('container').innerHTML = '';
-				chart.container('container').draw();
+				chart.container('container').draw(); */
 
-				document.getElementById('runbutton').hidden = false;
+				document.getElementById('vehicles').style.visibility = 'visible';
+				info.EVs = {};
+			}
+
+			function setevs () {
+				let txt, num = parseInt(txt = document.getElementById('evnum').value);
+				if (isNaN(num) || num < 1) return alert(`Invalid number of vehicles (${txt})`);
+				info.EVs = {};
+				for (let i = 0; i < num; i++) info.EVs[`P${i + 1}`] = {};
+				document.getElementById('evs').innerHTML = Object.keys(info.EVs).map(ev => `<fieldset><legend>${ev}</legend><div class="inline"><label for="${ev}source">Source</label>: <input type="text" list="${ev}sourcelist" id="${ev}source" class="inputcell" required /><datalist id="${ev}sourcelist">${info.nodes.map(node => `<option value="${node}" />`).join('')}</datalist></div><div class="inline"><label for="${ev}dest">Target</label>: <input type="text" list="${ev}destlist" id="${ev}dest" class="inputcell" required /><datalist id="${ev}destlist">${info.nodes.map(node => `<option value="${node}" />`).join('')}</datalist></div><br /><div class="inline"><label for="${ev}max">Battery Capacity</label>: <input type="text" id="${ev}max" class="nums" required /></div><div class="inline"><label for="${ev}init">Current Battery</label>: <input type="text" id="${ev}init" class="nums" required /></div><br /><div class="inline"><label for="${ev}charge">Charging Rate</label>: <input type="text" id="${ev}charge" class="nums" required /></div><div class="inline"><label for="${ev}discharge">Discharging Rate</label>: <input type="text" id="${ev}discharge" class="nums" required /></div><br /><div class="inline"><label for="${ev}init">Current Battery</label>: <input type="text" id="${ev}init" class="nums" required /></div></fieldset>`).join('<br />');
+				document.getElementById('vehtitle').hidden = false;
+				document.getElementById('evbuttons').hidden = false;
 			}
 
 			function run () {
 				let inputs = document.getElementsByName('edge');
-				let data = {
-					nodes: [
-						{id: 'V1'},
-						{id: 'V2'},
-						{id: 'V3'},
-						{id: 'V4'},
-						{id: 'V5'},
-						{id: 'V6'},
-						{id: 'V7'},
-						{id: 'V8'}
-					],
-					edges: []
-				}
+
+				stuff
+
 				for (let i = 0; i < 12; i++) {
 					const edge = inputs[i];
 					if (!edge.value) return;
@@ -159,14 +180,25 @@
 	</head>
 	<body>
 		<div id="container"></div>
-		<div id="controls">
+		<div id="graph">
 			<h2>Nodes</h2>
 			How many nodes does the graph have? <input type="text" id="nodenum" value="5" placeholder="#" required />&nbsp;&nbsp;<button onclick="setnodes()">Set</button>
 			<br />
 			<h2 id="edgestitle" hidden>Edges</h2>
 			<div id="edges"></div>
 			<br />
-			<span id="buttons" hidden><button name="Generate!" onclick="generate()">Generate map!</button>&nbsp;&nbsp;<button id="runbutton" name="Run!" onclick="run()" hidden>Run!</button></span>
+			<span id="graphbuttons" hidden><button name="Generate!" onclick="generate()">Generate map!</button></span>
+		</div>
+		<div id="vehicles" style="visibility: hidden;">
+			<h2>Vehicles</h2>
+			How many vehicles does the simulation have? <input type="text" id="evnum" value="3" placeholder="#" required />&nbsp;&nbsp;<button onclick="setevs()">Set</button>
+			<br />
+			<h2 id="vehtitle" /*hidden*/>Details</h2>
+			<div id="evs">
+
+			</div>
+			<br />
+			<span id="evbuttons" hidden><button name="run" onclick="run()">Run simulation!</button></span>
 		</div>
 	</body>
 </html>
