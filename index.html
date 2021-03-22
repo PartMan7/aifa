@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<meta charset="utf8">
+
+<html>
+	<head>
+		<title>AIFA - #3</title>
+		<style>
+			html, body {
+				height: 100%;
+				width: 100%;
+				margin: 0;
+				padding: 0;
+			}
+
+			#container {
+				height: 90%;
+				width: 40%;
+				margin: 0;
+				padding: 0;
+				display: inline-block;
+				float: left;
+			}
+
+			#graph, #vehicles {
+				width: 30%;
+				height: 90%;
+				display: inline-block;
+				margin-top: 3%;
+				float: left;
+				text-align: center;
+				font-size: 0.8em;
+				overflow-x: scroll;
+				overflow-y: scroll;
+			}
+
+			label {
+				display: inline-block;
+				font-size: 0.8em;
+			}
+
+			input[name=edge], input[name=ev], input.inputcell {
+				width: 20px;
+				display: inline-block;
+				font-size: 0.8em;
+			}
+
+			input.nums {
+				width: 25px;
+				display: inline-block;
+				font-size: 0.8em;
+			}
+
+			input#nodenum, input#evnum {
+				width: 15px;
+			}
+
+			fieldset {
+				width: 60%;
+				margin: auto;
+			}
+
+			div.inline {
+				display: inline-block;
+				margin-left: margin-right: 5px;
+			}
+		</style>
+
+		<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-core.min.js"></script>
+		<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-graph.min.js"></script>
+
+		<script>
+			let _init = false;
+
+			let info = {
+				nodes: [],
+				edges: [],
+				EVs: {}
+			}
+
+			anychart.onDocumentLoad(() => {
+				_init = true;
+			});
+
+			function setnodes () {
+				let txt, num = parseInt(txt = document.getElementById('nodenum').value);
+				if (isNaN(num) || num < 1) return alert(`Invalid number of nodes (${txt})`);
+				info.nodes = [];
+				for (let i = 0; i < num; i++) info.nodes.push(`V${i + 1}`);
+				let allEdges = [];
+				for (let i = 1; i <= num; i++) for (let j = i + 1; j <= num; j++) allEdges.push([i, j]);
+				document.getElementById('edges').innerHTML = allEdges.map(bw => `<label for="V${bw[0]}|V${bw[1]}">V${bw[0]}-V${bw[1]}</label>: <input type="text" name="edge" id="V${bw[0]}|V${bw[1]}" value="-"  placeholder="Length" required />`).join('<br />');
+				document.getElementById('edgestitle').hidden = false;
+				document.getElementById('graphbuttons').hidden = false;
+				document.getElementById('vehicles').style.visibility = 'hidden';
+				document.getElementById('vehtitle').hidden = true;
+				document.getElementById('evbuttons').hidden = true;
+			}
+
+			function generate () {
+				if (!_init) return alert(`Loading graph scripts.`);
+
+				let inputs = document.getElementsByName('edge');
+				let data = {
+					nodes: info.nodes.map(node => ({id: node}))
+				}
+				info.edges = [];
+
+				for (let i = 0; i < inputs.length; i++) {
+					const edge = inputs[i];
+					if (!edge.value) return;
+					if (edge.value === '-') continue;
+					const val = parseInt(edge.value);
+					if (isNaN(val)) return alert(`[${edge.id.split('|').join('-')}] ${edge.value} is not a valid number.`);
+					let coords = edge.id.split('|');
+					info.edges.push({ from: coords[0], to: coords[1], weight: String(val) });
+				}
+				data.edges = info.edges;
+
+				const chart = anychart.graph(data);
+				chart.title('Map');
+
+				chart.nodes().labels().enabled(true);
+				chart.nodes().labels().format("{%id}");
+				chart.nodes().labels().fontSize(12);
+				chart.nodes().labels().fontWeight(600);
+				chart.nodes().labels().fontColor("#00bfa5");
+
+				chart.edges().labels().enabled(true);
+				chart.edges().labels().format("{%weight}");
+				chart.edges().labels().fontSize(10);
+				chart.edges().labels().fontWeight(600);
+				chart.edges().labels().fontColor("#00bfa5");
+				chart.edges().tooltip().format("{%weight} (Between {%from} and {%to})");
+
+				document.getElementById('container').innerHTML = '';
+				chart.container('container').draw();
+
+				document.getElementById('vehicles').style.visibility = 'visible';
+				info.EVs = {};
+			}
+
+			function setevs () {
+				let txt, num = parseInt(txt = document.getElementById('evnum').value);
+				if (isNaN(num) || num < 1) return alert(`Invalid number of vehicles (${txt})`);
+				info.EVs = {};
+				for (let i = 0; i < num; i++) info.EVs[`P${i + 1}`] = {};
+				document.getElementById('evs').innerHTML = Object.keys(info.EVs).map(ev => `<fieldset><legend>${ev}</legend><div class="inline"><label for="${ev}source">Source</label>: <input type="text" list="${ev}sourcelist" id="${ev}source" class="inputcell" required /><datalist id="${ev}sourcelist">${info.nodes.map(node => `<option value="${node}" />`).join('')}</datalist></div><div class="inline"><label for="${ev}dest">Target</label>: <input type="text" list="${ev}destlist" id="${ev}dest" class="inputcell" required /><datalist id="${ev}destlist">${info.nodes.map(node => `<option value="${node}" />`).join('')}</datalist></div><br /><div class="inline"><label for="${ev}max">Battery Capacity</label>: <input type="text" id="${ev}max" class="nums" required /></div><div class="inline"><label for="${ev}init">Current Battery</label>: <input type="text" id="${ev}init" class="nums" required /></div><br /><div class="inline"><label for="${ev}charge">Charging Rate</label>: <input type="text" id="${ev}charge" class="nums" required /></div><div class="inline"><label for="${ev}discharge">Discharging Rate</label>: <input type="text" id="${ev}discharge" class="nums" required /></div><br /><div class="inline"><label for="${ev}init">Current Battery</label>: <input type="text" id="${ev}init" class="nums" required /></div></fieldset>`).join('<br />');
+				document.getElementById('vehtitle').hidden = false;
+				document.getElementById('evbuttons').hidden = false;
+			}
+
+			function run () {
+				let inputs = document.getElementsByName('edge');
+
+				stuff
+
+				for (let i = 0; i < 12; i++) {
+					const edge = inputs[i];
+					if (!edge.value) return;
+					const val = parseInt(edge.value);
+					if (isNaN(val)) return alert(`[${edge.id.split('|').join('-')}] ${edge.value} is not a valid number.`);
+					let coords = edge.id.split('|');
+					data.edges.push({ from: coords[0], to: coords[1], weight: val });
+				}
+
+				const graph = {};
+				data.nodes.forEach(node => graph[node.id] = {});
+				data.edges.forEach(edge => {
+					graph[edge.from][edge.to] = edge.weight;
+					graph[edge.to][edge.from] = edge.weight;
+				});
+
+				return console.log(JSON.stringify(graph));
+			}
+		</script>
+
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="graph">
+			<h2>Nodes</h2>
+			How many nodes does the graph have? <input type="text" id="nodenum" value="5" placeholder="#" required />&nbsp;&nbsp;<button onclick="setnodes()">Set</button>
+			<br />
+			<h2 id="edgestitle" hidden>Edges</h2>
+			<div id="edges"></div>
+			<br />
+			<span id="graphbuttons" hidden><button name="Generate!" onclick="generate()">Generate map!</button></span>
+		</div>
+		<div id="vehicles" style="visibility: hidden;">
+			<h2>Vehicles</h2>
+			How many vehicles does the simulation have? <input type="text" id="evnum" value="3" placeholder="#" required />&nbsp;&nbsp;<button onclick="setevs()">Set</button>
+			<br />
+			<h2 id="vehtitle" /*hidden*/>Details</h2>
+			<div id="evs">
+
+			</div>
+			<br />
+			<span id="evbuttons" hidden><button name="run" onclick="run()">Run simulation!</button></span>
+		</div>
+	</body>
+</html>
