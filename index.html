@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <meta charset="utf8">
-
 <html>
 	<head>
 		<title>AIFA - #3</title>
@@ -69,7 +68,11 @@
 		<script>
 			const debug = true;
 
-			const {sin, cos, PI} = Math, radius = 100, colours = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'];
+			let outputEvents = [];
+
+			const $ = (id) => document.getElementById(id);
+
+			const {sin, cos, abs, round, PI} = Math, radius = 100, colours = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'], largeNum = 10000000;
 
 			let info = {
 				nodes: [],
@@ -79,7 +82,7 @@
 			}
 
 			if (debug) {
-				info.nodes = Array.from({length: 5}).map((n, i) => `V${i + 1}`);
+				info.nodes = Array.from({length: 8}).map((n, i) => `V${i + 1}`);
 				info.edges = [
 					{ from: 'V1', to: 'V2', weight: 8 },
 					{ from: 'V1', to: 'V4', weight: 4 },
@@ -96,40 +99,56 @@
 				]
 				info.EVs = {
 					"P1": {
+						"name": "P1",
 						"source": "V1",
+						"currentNode": "V1",
 						"destination": "V8",
-						"init_battery": 5,
+						"initBattery": 5,
+						"currentBattery": 5,
 						"charging": 2,
 						"discharging": 3,
 						"max": 100,
-						"speed": 12
+						"speed": 12,
+						"isCharging": true
 					},
 					"P2": {
+						"name": "P2",
 						"source": "V2",
+						"currentNode": "V2",
 						"destination": "V8",
-						"init_battery": 20,
+						"initBattery": 20,
+						"currentBattery": 20,
 						"charging": 10,
 						"discharging": 11,
 						"max": 200,
-						"speed": 20
+						"speed": 20,
+						"isCharging": false
 					},
 					"P3": {
+						"name": "P3",
 						"source": "V3",
+						"currentNode": "V3",
 						"destination": "V6",
-						"init_battery": 4,
+						"initBattery": 4,
+						"currentBattery": 4,
 						"charging": 1,
 						"discharging": 2,
 						"max": 120,
-						"speed": 15
+						"speed": 15,
+						"isCharging": false
 					},
 					"P4": {
+						"name": "P4",
 						"source": "V4",
+						"currentNode": "V4",
 						"destination": "V1",
-						"init_battery": 4,
+						"initBattery": 4,
+						"currentBattery": 4,
 						"charging": 2,
 						"discharging": 3,
 						"max": 100,
-						"speed": 12
+						"speed": 12,
+						"isCharging": false
 					}
 				}
 			}
@@ -137,23 +156,9 @@
 			let ctx;
 
 			window.onload = () => {
-				ctx = document.getElementById('canvas').getContext('2d');
+				ctx = $('canvas').getContext('2d');
 				ctx.lineWidth = 1;
-			}
-
-			function setnodes () {
-				let txt, num = debug ? 8 : parseInt(txt = document.getElementById('nodenum').value);
-				if (isNaN(num) || num < 1) return alert(`Invalid number of nodes (${txt})`);
-				info.nodes = [];
-				for (let i = 0; i < num; i++) info.nodes.push(`V${i + 1}`);
-				let allEdges = [];
-				for (let i = 1; i <= num; i++) for (let j = i + 1; j <= num; j++) allEdges.push([i, j]);
-				document.getElementById('edges').innerHTML = allEdges.map(bw => `<label for="V${bw[0]}|V${bw[1]}">V${bw[0]}-V${bw[1]}</label>: <input type="text" name="edge" id="V${bw[0]}|V${bw[1]}" value="-"	placeholder="Length" required />`).join('<br />');
-				document.getElementById('edgestitle').hidden = false;
-				document.getElementById('graphbuttons').hidden = false;
-				document.getElementById('vehicles').style.visibility = 'hidden';
-				document.getElementById('vehtitle').hidden = true;
-				document.getElementById('evbuttons').hidden = true;
+				ctx.textAlign = 'left';
 			}
 
 			function draw (info, vehs) {
@@ -161,7 +166,7 @@
 				const delta = 2 * PI / info.nodes.length;
 
 				info.nodes.forEach((node, i) => info.nodepos[node] = [150 + radius * cos(i * delta), 150 - radius * sin(i * delta)]);
-
+				ctx.textAlign = 'left';
 				info.edges.forEach(edge => {
 					ctx.lineWidth = 1;
 					ctx.beginPath();
@@ -195,6 +200,53 @@
 					ctx.fillStyle = 'black';
 					ctx.fillText(node, coord[0] - 12, coord[1] + 7);
 				});
+
+				if (!vehs) return;
+
+				ctx.beginPath();
+				ctx.moveTo(0, 300);
+				ctx.lineTo(300, 300);
+				ctx.stroke();
+
+				let amt = vehs.length;
+				for (let i = 1; i < amt; i++) {
+					ctx.strokeStyle = 'black';
+					ctx.beginPath();
+					ctx.moveTo(i * 300 / amt, 300);
+					ctx.lineTo(i * 300 / amt, 500);
+					ctx.stroke();
+				}
+
+				for (let i = 0; i < amt; i++) {
+					let percentage = round(vehs[i].currentBattery / vehs[i].max * 100);
+					ctx.textAlign = 'center';
+					ctx.fillStyle = colours[i];
+					ctx.fillRect(i * 300 / amt + 0.5, 500, 74.5, -2 * percentage);
+					ctx.fillStyle = 'white';
+					const txt = vehs[i].name;
+					ctx.font = 'bold 35px Arial';
+					ctx.fillText(txt, (i + 0.5) * 300 / amt, 360);
+					ctx.strokeText(txt, (i + 0.5) * 300 / amt, 360);
+					ctx.font = 'bold 25px Arial';
+					ctx.fillText(`${percentage}%`, (i + 0.5) * 300 / amt, 440);
+					ctx.strokeText(`${percentage}%`, (i + 0.5) * 300 / amt, 440);
+					if (vehs[i].isCharging) ctx.fillText('⚡', (i + 0.5) * 300 / amt, 480);
+				}
+			}
+
+			function setnodes () {
+				let txt, num = debug ? 8 : parseInt(txt = $('nodenum').value);
+				if (isNaN(num) || num < 1) return alert(`Invalid number of nodes (${txt})`);
+				info.nodes = [];
+				for (let i = 0; i < num; i++) info.nodes.push(`V${i + 1}`);
+				let allEdges = [];
+				for (let i = 1; i <= num; i++) for (let j = i + 1; j <= num; j++) allEdges.push([i, j]);
+				$('edges').innerHTML = allEdges.map(bw => `<label for="V${bw[0]}|V${bw[1]}">V${bw[0]}-V${bw[1]}</label>: <input type="text" name="edge" id="V${bw[0]}|V${bw[1]}" value="-"	placeholder="Length" required />`).join('<br />');
+				$('edgestitle').hidden = false;
+				$('graphbuttons').hidden = false;
+				$('vehicles').style.visibility = 'hidden';
+				$('vehtitle').hidden = true;
+				$('evbuttons').hidden = true;
 			}
 
 			function generate () {
@@ -218,48 +270,102 @@
 					info.EVs = {};
 				}
 
-				document.getElementById('vehicles').style.visibility = 'visible';
-				draw(info, []);
+				$('vehicles').style.visibility = 'visible';
+				draw(info);
 			}
 
 			function setevs () {
-				let txt, num = parseInt(txt = document.getElementById('evnum').value);
-				if (isNaN(num) || num < 1) return alert(`Invalid number of vehicles (${txt})`);
-				info.EVs = {};
-				for (let i = 0; i < num; i++) info.EVs[`P${i + 1}`] = {};
-				document.getElementById('evs').innerHTML = Object.keys(info.EVs).map(ev => `<fieldset><legend>${ev}</legend><div class="inline"><label for="${ev}source">Source</label>: <input type="text" list="${ev}sourcelist" id="${ev}source" class="inputcell" required /><datalist id="${ev}sourcelist">${info.nodes.map(node => `<option value="${node}" />`).join('')}</datalist></div><div class="inline"><label for="${ev}dest">Target</label>: <input type="text" list="${ev}destlist" id="${ev}dest" class="inputcell" required /><datalist id="${ev}destlist">${info.nodes.map(node => `<option value="${node}" />`).join('')}</datalist></div><br /><div class="inline"><label for="${ev}max">Battery Capacity</label>: <input type="text" id="${ev}max" class="nums" required /></div><div class="inline"><label for="${ev}init">Current Battery</label>: <input type="text" id="${ev}init" class="nums" required /></div><br /><div class="inline"><label for="${ev}charge">Charging Rate</label>: <input type="text" id="${ev}charge" class="nums" required /></div><div class="inline"><label for="${ev}discharge">Discharging Rate</label>: <input type="text" id="${ev}discharge" class="nums" required /></div><br /><div class="inline"><label for="${ev}init">Current Battery</label>: <input type="text" id="${ev}init" class="nums" required /></div></fieldset>`).join('<br />');
-				document.getElementById('vehtitle').hidden = false;
-				document.getElementById('evbuttons').hidden = false;
+				let txt, num = debug ? 4 : parseInt(txt = $('evnum').value);
+				if (!debug) {
+					if (isNaN(num) || num < 1) return alert(`Invalid number of vehicles (${txt})`);
+					info.EVs = {};
+					for (let i = 0; i < num; i++) info.EVs[`P${i + 1}`] = {};
+				}
+				$('evs').innerHTML = Object.keys(info.EVs).map(ev => `<fieldset><legend>${ev}</legend><div class="inline"><label for="${ev}source">Source</label>: <input type="text" list="${ev}sourcelist" id="${ev}source" class="inputcell" required /><datalist id="${ev}sourcelist">${info.nodes.map(node => `<option value="${node}" />`).join('')}</datalist></div><div class="inline"><label for="${ev}dest">Target</label>: <input type="text" list="${ev}destlist" id="${ev}dest" class="inputcell" required /><datalist id="${ev}destlist">${info.nodes.map(node => `<option value="${node}" />`).join('')}</datalist></div><br /><div class="inline"><label for="${ev}speed">Speed</label>: <input type="text" id="${ev}speed" class="nums" required /></div><br /><div class="inline"><label for="${ev}max">Battery Capacity</label>: <input type="text" id="${ev}max" class="nums" required /></div><div class="inline"><label for="${ev}init">Current Battery</label>: <input type="text" id="${ev}init" class="nums" required /></div><br /><div class="inline"><label for="${ev}charge">Charging Rate</label>: <input type="text" id="${ev}charge" class="nums" required /></div><div class="inline"><label for="${ev}discharge">Discharging Rate</label>: <input type="text" id="${ev}discharge" class="nums" required /></div><br /><div class="inline"><label for="${ev}init">Current Battery</label>: <input type="text" id="${ev}init" class="nums" required /></div></fieldset>`).join('<br />');
+				$('vehtitle').hidden = false;
+				$('evbuttons').hidden = false;
+			}
+
+			function heuristic (graph, EVs) {
+				
+				// This heuristic function simply solves the case when the constraint of only one car per
+				// station is removed. It uses Dijkstra's algorithm to find the minimum time in this case, 
+				// since with the constraint removed, every car's optimal path can be calculated independently.
+				// The heuristic value is simply the maximum of the optimal times for each car.
+
+				return Object.keys(EVs).map(car => {
+					let EV = EVs[car];
+					const maxDist = EV.max / EV.discharging;
+
+					// Start Dijkstra
+					const distances = {}, parents = {}, iterate = [];
+					Object.keys(graph).forEach(city => {
+						distances[city] = largeNum;
+						iterate.push(city);
+					});
+					distances[EV.currentNode] = 0;
+					parents[EV.currentNode] = null;
+					while (iterate.length) {
+						let min = largeNum, minCity = null;
+						iterate.forEach(city => {
+							let dist = distances[city];
+							if (dist < min) {
+								min = dist;
+								minCity = city;
+							}
+						});
+						iterate.splice(iterate.indexOf(minCity), 1);
+						Object.keys(graph[minCity]).forEach(nCity => {
+							if (graph[minCity][nCity] > maxDist) return; // Ignore edges that are too long
+							let upd = min + graph[minCity][nCity];
+							if (upd < distances[nCity]) {
+								distances[nCity] = upd;
+								parents[nCity] = minCity;
+							}
+						});
+					}
+					let chain = [EV.destination]; // Get Dijkstra's optimal path
+					while (parents[chain[0]]) chain.unshift(parents[chain[0]]);
+					let time = 0;
+					time += distances[EV.destination] / EV.speed; // Transport time
+					let requiredBattery = distances[EV.destination] * EV.discharging - EV.currentBattery;
+					time += requiredBattery / EV.charging; // Required charging time
+					return time;
+				}).reduce((a, b) => a < b ? b : a, 0);
 			}
 
 			function run () {
-				let inputs = document.getElementsByName('edge');
-
-				// stuff
-
-				for (let i = 0; i < 12; i++) {
-					const edge = inputs[i];
-					if (!edge.value) return;
-					const val = parseInt(edge.value);
-					if (isNaN(val)) return alert(`[${edge.id.split('|').join('-')}] ${edge.value} is not a valid number.`);
-					let coords = edge.id.split('|');
-					data.edges.push({ from: coords[0], to: coords[1], weight: val });
+				if (!debug) {
+					for (let i = 0; i < Object.keys(info.EVs).length; i++) {
+						let label = `P${i + 1}`, EV = info.EVs[label];
+						EV.source = $(`${label}source`).value.trim();
+						EV.destination = $(`${label}dest`).value.trim();
+						EV.currentBattery = EV.initBattery = abs(parseFloat($(`${label}init`).value.trim()));
+						EV.charging = abs(parseFloat($(`${label}charge`).value.trim()));
+						EV.discharging = abs(parseFloat($(`${label}discharge`).value.trim()));
+						EV.max = abs(parseFloat($(`${label}max`).value.trim()));
+						EV.speed = abs(parseFloat($(`${label}speed`).value.trim()));
+						if (['source', 'destination'].find(t => !info.nodes.includes(EV[t]))) return alert(`Invalid source / destination [${label}]`);
+						if (['initBattery', 'charging', 'discharging', 'max', 'speed'].find(t => isNaN(EV[t]))) return alert(`Invalid quantity value in [${label}]`);
+					}
 				}
 
+				// generate graph
+
 				const graph = {};
-				data.nodes.forEach(node => graph[node.id] = {});
-				data.edges.forEach(edge => {
+				info.nodes.forEach(node => graph[node] = {});
+				info.edges.forEach(edge => {
 					graph[edge.from][edge.to] = edge.weight;
 					graph[edge.to][edge.from] = edge.weight;
 				});
 
-				return console.log(JSON.stringify(graph));
+				outputEvents = algorithm(graph, info.EVs);
 			}
 		</script>
 
 	</head>
 	<body>
-		<div id="container"><canvas id="canvas" width="500px" height="300px">Unsupported browser, please update</canvas></div>
+		<div id="container"><canvas id="canvas" width="300px" height="500px">Unsupported browser, please update</canvas></div>
 		<div id="graph">
 			<h2>Nodes</h2>
 			How many nodes does the graph have? <input type="text" id="nodenum" value="5" placeholder="#" required />&nbsp;&nbsp;<button onclick="setnodes()">Set</button>
