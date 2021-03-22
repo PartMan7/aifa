@@ -67,15 +67,71 @@
 		</style>
 
 		<script>
-			const {sin, cos, tan, asin, acos, atan, PI} = Math;
+			const debug = true;
 
-			const radius = 100;
+			const {sin, cos, PI} = Math, radius = 100, colours = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'];
 
 			let info = {
 				nodes: [],
 				edges: [],
 				EVs: {},
 				nodepos: {}
+			}
+
+			if (debug) {
+				info.nodes = Array.from({length: 5}).map((n, i) => `V${i + 1}`);
+				info.edges = [
+					{ from: 'V1', to: 'V2', weight: 8 },
+					{ from: 'V1', to: 'V4', weight: 4 },
+					{ from: 'V1', to: 'V5', weight: 10 },
+					{ from: 'V2', to: 'V3', weight: 4 },
+					{ from: 'V3', to: 'V4', weight: 7 },
+					{ from: 'V3', to: 'V7', weight: 6 },
+					{ from: 'V4', to: 'V5', weight: 8 },
+					{ from: 'V4', to: 'V7', weight: 6 },
+					{ from: 'V5', to: 'V6', weight: 5 },
+					{ from: 'V6', to: 'V7', weight: 1 },
+					{ from: 'V6', to: 'V8', weight: 2 },
+					{ from: 'V7', to: 'V8', weight: 5 }
+				]
+				info.EVs = {
+					"P1": {
+						"source": "V1",
+						"destination": "V8",
+						"init_battery": 5,
+						"charging": 2,
+						"discharging": 3,
+						"max": 100,
+						"speed": 12
+					},
+					"P2": {
+						"source": "V2",
+						"destination": "V8",
+						"init_battery": 20,
+						"charging": 10,
+						"discharging": 11,
+						"max": 200,
+						"speed": 20
+					},
+					"P3": {
+						"source": "V3",
+						"destination": "V6",
+						"init_battery": 4,
+						"charging": 1,
+						"discharging": 2,
+						"max": 120,
+						"speed": 15
+					},
+					"P4": {
+						"source": "V4",
+						"destination": "V1",
+						"init_battery": 4,
+						"charging": 2,
+						"discharging": 3,
+						"max": 100,
+						"speed": 12
+					}
+				}
 			}
 
 			let ctx;
@@ -86,13 +142,13 @@
 			}
 
 			function setnodes () {
-				let txt, num = parseInt(txt = document.getElementById('nodenum').value);
+				let txt, num = debug ? 8 : parseInt(txt = document.getElementById('nodenum').value);
 				if (isNaN(num) || num < 1) return alert(`Invalid number of nodes (${txt})`);
 				info.nodes = [];
 				for (let i = 0; i < num; i++) info.nodes.push(`V${i + 1}`);
 				let allEdges = [];
 				for (let i = 1; i <= num; i++) for (let j = i + 1; j <= num; j++) allEdges.push([i, j]);
-				document.getElementById('edges').innerHTML = allEdges.map(bw => `<label for="V${bw[0]}|V${bw[1]}">V${bw[0]}-V${bw[1]}</label>: <input type="text" name="edge" id="V${bw[0]}|V${bw[1]}" value="-"  placeholder="Length" required />`).join('<br />');
+				document.getElementById('edges').innerHTML = allEdges.map(bw => `<label for="V${bw[0]}|V${bw[1]}">V${bw[0]}-V${bw[1]}</label>: <input type="text" name="edge" id="V${bw[0]}|V${bw[1]}" value="-"	placeholder="Length" required />`).join('<br />');
 				document.getElementById('edgestitle').hidden = false;
 				document.getElementById('graphbuttons').hidden = false;
 				document.getElementById('vehicles').style.visibility = 'hidden';
@@ -100,7 +156,7 @@
 				document.getElementById('evbuttons').hidden = true;
 			}
 
-			function draw (vehs) {
+			function draw (info, vehs) {
 				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 				const delta = 2 * PI / info.nodes.length;
 
@@ -142,27 +198,28 @@
 			}
 
 			function generate () {
+				if (!debug) {
+					let inputs = document.getElementsByName('edge');
+					let data = {
+						nodes: info.nodes.map(node => ({id: node}))
+					}
+					info.edges = [];
 
-				let inputs = document.getElementsByName('edge');
-				let data = {
-					nodes: info.nodes.map(node => ({id: node}))
+					for (let i = 0; i < inputs.length; i++) {
+						const edge = inputs[i];
+						if (!edge.value) return;
+						if (edge.value === '-') continue;
+						const val = parseInt(edge.value);
+						if (isNaN(val)) return alert(`[${edge.id.split('|').join('-')}] ${edge.value} is not a valid number.`);
+						let coords = edge.id.split('|');
+						info.edges.push({ from: coords[0], to: coords[1], weight: String(val) });
+					}
+					data.edges = info.edges;
+					info.EVs = {};
 				}
-				info.edges = [];
-
-				for (let i = 0; i < inputs.length; i++) {
-					const edge = inputs[i];
-					if (!edge.value) return;
-					if (edge.value === '-') continue;
-					const val = parseInt(edge.value);
-					if (isNaN(val)) return alert(`[${edge.id.split('|').join('-')}] ${edge.value} is not a valid number.`);
-					let coords = edge.id.split('|');
-					info.edges.push({ from: coords[0], to: coords[1], weight: String(val) });
-				}
-				data.edges = info.edges;
 
 				document.getElementById('vehicles').style.visibility = 'visible';
-				info.EVs = {};
-				draw([]);
+				draw(info, []);
 			}
 
 			function setevs () {
@@ -218,7 +275,6 @@
 			<br />
 			<h2 id="vehtitle" /*hidden*/>Details</h2>
 			<div id="evs">
-
 			</div>
 			<br />
 			<span id="evbuttons" hidden><button name="run" onclick="run()">Run simulation!</button></span>
