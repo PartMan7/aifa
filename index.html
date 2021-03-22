@@ -13,12 +13,13 @@
 			}
 
 			#container {
-				height: 90%;
-				width: 40%;
+				height: 500px;
+				width: 300px;
 				margin: 0;
 				padding: 0;
 				display: inline-block;
 				float: left;
+				border: 1px solid black;
 			}
 
 			#graph, #vehicles {
@@ -65,21 +66,15 @@
 			}
 		</style>
 
-		<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-core.min.js"></script>
-		<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-graph.min.js"></script>
-
 		<script>
-			let _init = false;
+			const {sin, cos, tan, asin, acos, atan, PI} = Math;
 
 			let info = {
 				nodes: [],
 				edges: [],
-				EVs: {}
+				EVs: {},
+				nodepos: {}
 			}
-
-			anychart.onDocumentLoad(() => {
-				_init = true;
-			});
 
 			function setnodes () {
 				let txt, num = parseInt(txt = document.getElementById('nodenum').value);
@@ -97,7 +92,6 @@
 			}
 
 			function generate () {
-				if (!_init) return alert(`Loading graph scripts.`);
 
 				let inputs = document.getElementsByName('edge');
 				let data = {
@@ -116,27 +110,10 @@
 				}
 				data.edges = info.edges;
 
-				const chart = anychart.graph(data);
-				chart.title('Map');
-
-				chart.nodes().labels().enabled(true);
-				chart.nodes().labels().format("{%id}");
-				chart.nodes().labels().fontSize(12);
-				chart.nodes().labels().fontWeight(600);
-				chart.nodes().labels().fontColor("#00bfa5");
-
-				chart.edges().labels().enabled(true);
-				chart.edges().labels().format("{%weight}");
-				chart.edges().labels().fontSize(10);
-				chart.edges().labels().fontWeight(600);
-				chart.edges().labels().fontColor("#00bfa5");
-				chart.edges().tooltip().format("{%weight} (Between {%from} and {%to})");
-
-				document.getElementById('container').innerHTML = '';
-				chart.container('container').draw();
-
 				document.getElementById('vehicles').style.visibility = 'visible';
 				info.EVs = {};
+
+				info.nodes.forEach(node => );
 			}
 
 			function setevs () {
@@ -152,7 +129,7 @@
 			function run () {
 				let inputs = document.getElementsByName('edge');
 
-				stuff
+				// stuff
 
 				for (let i = 0; i < 12; i++) {
 					const edge = inputs[i];
@@ -176,7 +153,7 @@
 
 	</head>
 	<body>
-		<div id="container"></div>
+		<div id="container"><canvas id="canvas">Unsupported browser, please update</canvas></div>
 		<div id="graph">
 			<h2>Nodes</h2>
 			How many nodes does the graph have? <input type="text" id="nodenum" value="5" placeholder="#" required />&nbsp;&nbsp;<button onclick="setnodes()">Set</button>
