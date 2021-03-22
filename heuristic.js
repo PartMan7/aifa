@@ -38,23 +38,23 @@ let EVs = {
 }
 
 const graph = {
-  V1: { V2: 8, V4: 4, V5: 10 },
-  V2: { V1: 8, V3: 4 },
-  V3: { V2: 4, V4: 7, V7: 6 },
-  V4: { V1: 4, V3: 7, V5: 8, V7: 6 },
-  V5: { V1: 10, V4: 8, V6: 5 },
-  V6: { V5: 5, V7: 1, V8: 2 },
-  V7: { V3: 6, V4: 6, V6: 1, V8: 5 },
-  V8: { V6: 2, V7: 5 }
+	V1: { V2: 8, V4: 4, V5: 10 },
+	V2: { V1: 8, V3: 4 },
+	V3: { V2: 4, V4: 7, V7: 6 },
+	V4: { V1: 4, V3: 7, V5: 8, V7: 6 },
+	V5: { V1: 10, V4: 8, V6: 5 },
+	V6: { V5: 5, V7: 1, V8: 2 },
+	V7: { V3: 6, V4: 6, V6: 1, V8: 5 },
+	V8: { V6: 2, V7: 5 }
 }
 
 const cities = Object.keys(graph), largeNum = 10000000;
 
 let h;
 
-function heuristic (vehicles) {
-	
-	// This heuristic function simply solves the case when the constraint of only one car per
+function heuristic(vehicles) {
+
+	// This heuristic function simply solves the case when the constraint of charging only one car per
 	// station is removed. It uses Dijkstra's algorithm to find the minimum time in this case, 
 	// since with the constraint removed, every car's optimal path can be calculated independently.
 	// The heuristic value is simply the maximum of the optimal times for each car.
