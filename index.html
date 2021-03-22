@@ -69,11 +69,20 @@
 		<script>
 			const {sin, cos, tan, asin, acos, atan, PI} = Math;
 
+			const radius = 100;
+
 			let info = {
 				nodes: [],
 				edges: [],
 				EVs: {},
 				nodepos: {}
+			}
+
+			let ctx;
+
+			window.onload = () => {
+				ctx = document.getElementById('canvas').getContext('2d');
+				ctx.lineWidth = 1;
 			}
 
 			function setnodes () {
@@ -89,6 +98,47 @@
 				document.getElementById('vehicles').style.visibility = 'hidden';
 				document.getElementById('vehtitle').hidden = true;
 				document.getElementById('evbuttons').hidden = true;
+			}
+
+			function draw (vehs) {
+				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+				const delta = 2 * PI / info.nodes.length;
+
+				info.nodes.forEach((node, i) => info.nodepos[node] = [150 + radius * cos(i * delta), 150 - radius * sin(i * delta)]);
+
+				info.edges.forEach(edge => {
+					ctx.lineWidth = 1;
+					ctx.beginPath();
+					ctx.moveTo(...info.nodepos[edge.from]);
+					ctx.lineTo(...info.nodepos[edge.to]);
+					ctx.stroke();
+				});
+
+				info.edges.forEach(edge => {
+					let midpoint = [(info.nodepos[edge.from][0] + info.nodepos[edge.to][0]) / 2, (info.nodepos[edge.from][1] + info.nodepos[edge.to][1]) / 2];
+					ctx.fillStyle = 'white';
+					ctx.beginPath();
+					ctx.arc(midpoint[0], midpoint[1], 10, 0, 2 * PI, false);
+					ctx.fill();
+					ctx.fillStyle = 'black';
+					ctx.font = '10px Arial';
+					ctx.fillText(edge.weight, midpoint[0] - (edge.weight <= 9 ? 3 : 6), midpoint[1] + 4);
+				});
+
+				Object.keys(info.nodepos).forEach(node => {
+					ctx.font = '20px Arial';
+					ctx.lineWidth = 1;
+					const coord = info.nodepos[node];
+					ctx.beginPath();
+					ctx.arc(coord[0], coord[1], 20, 0, 2 * PI, false);
+					ctx.fill();
+					ctx.beginPath();
+					ctx.fillStyle = 'white';
+					ctx.arc(coord[0], coord[1], 18, 0, 2 * PI, false);
+					ctx.fill();
+					ctx.fillStyle = 'black';
+					ctx.fillText(node, coord[0] - 12, coord[1] + 7);
+				});
 			}
 
 			function generate () {
@@ -112,8 +162,7 @@
 
 				document.getElementById('vehicles').style.visibility = 'visible';
 				info.EVs = {};
-
-				info.nodes.forEach(node => );
+				draw([]);
 			}
 
 			function setevs () {
@@ -153,7 +202,7 @@
 
 	</head>
 	<body>
-		<div id="container"><canvas id="canvas">Unsupported browser, please update</canvas></div>
+		<div id="container"><canvas id="canvas" width="500px" height="300px">Unsupported browser, please update</canvas></div>
 		<div id="graph">
 			<h2>Nodes</h2>
 			How many nodes does the graph have? <input type="text" id="nodenum" value="5" placeholder="#" required />&nbsp;&nbsp;<button onclick="setnodes()">Set</button>
