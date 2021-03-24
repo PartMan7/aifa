@@ -68,11 +68,20 @@
 		<script>
 			const debug = true;
 
-			let outputEvents = [];
-
 			const $ = (id) => document.getElementById(id);
 
-			const {sin, cos, abs, round, PI} = Math, radius = 100, colours = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'], largeNum = 10000000;
+			const {sin, cos, abs, round, PI} = Math, radius = 100, colours = [
+				[ 230, 25, 75 ], [ 60, 180, 75 ],
+				[ 255, 225, 25 ], [ 67, 99, 216 ],
+				[ 245, 130, 49 ], [ 145, 30, 180 ],
+				[ 70, 240, 240 ], [ 240, 50, 230 ],
+				[ 188, 246, 12 ], [ 250, 190, 190 ],
+				[ 0, 128, 128 ], [ 230, 190, 255 ],
+				[ 154, 99, 36 ], [ 255, 250, 200 ],
+				[ 128, 0, 0 ], [ 170, 255, 195 ],
+				[ 128, 128, 0 ], [ 255, 216, 177 ],
+				[ 0, 0, 117 ], [ 128, 128, 128 ]
+			], largeNum = 10000000, frameRate = 100;
 
 			let info = {
 				nodes: [],
@@ -103,13 +112,14 @@
 						"source": "V1",
 						"currentNode": "V1",
 						"destination": "V8",
-						"initBattery": 5,
-						"currentBattery": 5,
+						"initBattery": 80,
+						"currentBattery": 80,
 						"charging": 2,
 						"discharging": 3,
 						"max": 100,
 						"speed": 12,
-						"isCharging": true
+						"isCharging": true,
+						"route": [{type: 'travel', from: 'V1', to: 'V4', time: 0}, {type: 'charge', at: 'V4', time: 2}, {type: 'discharge', at: 'V4', time: 5}, {type: 'travel', from: 'V4', to: 'V5', progress: 0, time: 5}]
 					},
 					"P2": {
 						"name": "P2",
@@ -122,7 +132,8 @@
 						"discharging": 11,
 						"max": 200,
 						"speed": 20,
-						"isCharging": false
+						"isCharging": false,
+						"route": []
 					},
 					"P3": {
 						"name": "P3",
@@ -135,7 +146,8 @@
 						"discharging": 2,
 						"max": 120,
 						"speed": 15,
-						"isCharging": false
+						"isCharging": false,
+						"route": []
 					},
 					"P4": {
 						"name": "P4",
@@ -148,7 +160,8 @@
 						"discharging": 3,
 						"max": 100,
 						"speed": 12,
-						"isCharging": false
+						"isCharging": false,
+						"route": []
 					}
 				}
 			}
@@ -161,9 +174,10 @@
 				ctx.textAlign = 'left';
 			}
 
-			function draw (info, vehs) {
+			function draw (info, vehs, time) {
 				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 				const delta = 2 * PI / info.nodes.length;
+				info.nodepos = {};
 
 				info.nodes.forEach((node, i) => info.nodepos[node] = [150 + radius * cos(i * delta), 150 - radius * sin(i * delta)]);
 				ctx.textAlign = 'left';
@@ -217,16 +231,66 @@
 					ctx.stroke();
 				}
 
+				vehs.forEach((veh, index) => {
+					let last = null, rt = veh.route;
+					for (let i = 0; i < rt.length; i++) {
+						if (rt[i].time <= time) last = rt[i];
+						else break;
+					}
+					let vCoords = info.nodepos[veh.source];
+					veh.pos = veh.source;
+					// [{type:'travel',from:'V1',to:'V2',time:0, progress: 0.1},{type:'charge',from:'V2',time:4},{type:'travel',from:'V2',to:'V3',time:8, progress: 0.7}]
+					if (last) switch (last.type) {
+						case 'charge': {
+							veh.isCharging = true;
+							vCoords = info.nodepos[last.at];
+							veh.pos = last.at;
+							break;
+						}
+						case 'discharge': {
+							veh.isCharging = false;
+							vCoords = info.nodepos[last.at];
+							veh.pos = last.at;
+							break;
+						}
+						case 'travel': {
+							veh.isCharging = false;
+							let onEdge = info.edges.find(edge => (edge.from === last.from && edge.to === last.to) || (edge.to === last.from && edge.from === last.to)), progress = (time - last.time) * veh.speed / onEdge.weight;
+							if (progress > 1) progress = 1;
+							veh.pos = `${last.from} to ${last.to}`;
+							vCoords = Array.from({length: 2}).map((n, i) => ((1 - progress) * info.nodepos[last.from][i] + progress * info.nodepos[last.to][i]));
+							break;
+						}
+					}
+					if (!Array.isArray(vCoords)) {
+						console.log(last, vCoords);
+						return alert(JSON.stringify(vCoords, null, '\t'));
+					}
+
+					ctx.beginPath();
+					ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+					ctx.arc(...vCoords, 10, 0, 2 * PI, false);
+					ctx.fill();
+					ctx.beginPath();
+					ctx.fillStyle = `rgba(${colours[index].join(', ')}, 0.6)`;
+					ctx.arc(...vCoords, 9, 0, 2 * PI, false);
+					ctx.fill();
+					ctx.fillStyle = 'black';
+				});
+
 				for (let i = 0; i < amt; i++) {
 					let percentage = round(vehs[i].currentBattery / vehs[i].max * 100);
 					ctx.textAlign = 'center';
-					ctx.fillStyle = colours[i];
+					ctx.fillStyle = `rgb(${colours[i].join(', ')})`;
 					ctx.fillRect(i * 300 / amt + 0.5, 500, 74.5, -2 * percentage);
 					ctx.fillStyle = 'white';
 					const txt = vehs[i].name;
 					ctx.font = 'bold 35px Arial';
 					ctx.fillText(txt, (i + 0.5) * 300 / amt, 360);
 					ctx.strokeText(txt, (i + 0.5) * 300 / amt, 360);
+					ctx.font = 'bold 10px Arial';
+					ctx.fillText(vehs[i].pos, (i + 0.5) * 300 / amt, 400);
+					ctx.strokeText(vehs[i].pos, (i + 0.5) * 300 / amt, 400);
 					ctx.font = 'bold 25px Arial';
 					ctx.fillText(`${percentage}%`, (i + 0.5) * 300 / amt, 440);
 					ctx.strokeText(`${percentage}%`, (i + 0.5) * 300 / amt, 440);
