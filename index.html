@@ -291,6 +291,10 @@
 					ctx.textAlign = 'center';
 					ctx.fillStyle = `rgb(${colours[i].join(', ')})`;
 					ctx.fillRect(i * 300 / amt + 0.5, 500, 74.5, -2 * percentage);
+					ctx.beginPath();
+					ctx.arc((i + 0.5) * 300 / amt, 320, 5, 0, 2 * PI, false);
+					ctx.fill();
+					ctx.beginPath();
 					ctx.fillStyle = 'white';
 					const txt = vehs[i].name;
 					ctx.font = 'bold 35px Arial';
