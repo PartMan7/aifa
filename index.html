@@ -117,14 +117,14 @@
 						"charging": 2,
 						"discharging": 3,
 						"max": 100,
-						"speed": 2,
+						"speed": 10,
 						"isCharging": true,
-						"route": [
+						"route": [/*
 							{type: 'travel', from: 'V1', to: 'V4', time: 0, battery: 80},
 							{type: 'charge', at: 'V4', time: 4, battery: 74},
 							{type: 'discharge', at: 'V4', time: 5, battery: 76},
-							{type: 'travel', from: 'V4', to: 'V5', progress: 0, time: 5, battery: 76}
-						]
+							{type: 'travel', from: 'V4', to: 'V5', time: 5, battery: 76}
+						*/]
 					},
 					"P2": {
 						"name": "P2",
@@ -263,7 +263,7 @@
 							veh.isCharging = false;
 							let onEdge = info.edges.find(edge => (edge.from === last.from && edge.to === last.to) || (edge.to === last.from && edge.from === last.to)), progress = (time - last.time) * veh.speed / onEdge.weight;
 							if (progress > 1) progress = 1;
-							veh.pos = `${last.from} to ${last.to}`;
+							veh.pos = progress === 1 ? `${last.to}` : `${last.from} to ${last.to}`;
 							veh.currentBattery = last.battery - ([time - last.time, onEdge.weight / veh.speed].sort((a, b) => a - b)[0]) * veh.discharging;
 							if (veh.currentBattery < 0) alert(veh.currentBattery = 0); // Should NEVER happen
 							vCoords = Array.from({length: 2}).map((n, i) => ((1 - progress) * info.nodepos[last.from][i] + progress * info.nodepos[last.to][i]));
@@ -358,7 +358,7 @@
 				$('evbuttons').hidden = false;
 			}
 
-			function heuristic (graph, EVs) {
+			function heuristic (graph, EVs, animated) {
 				
 				// This heuristic function simply solves the case when the constraint of only one car per
 				// station is removed. It uses Dijkstra's algorithm to find the minimum time in this case, 
@@ -402,6 +402,25 @@
 					time += distances[EV.destination] / EV.speed; // Transport time
 					let requiredBattery = distances[EV.destination] * EV.discharging - EV.currentBattery;
 					time += requiredBattery / EV.charging; // Required charging time
+					if (animated) {
+						// generate route for animation purposes
+						let lN = null, cT = 0, cB = EV.initBattery;
+						chain.forEach(node => {
+							if (node === chain[0]) return lN = node;
+							let reqBat = graph[node][lN] * EV.discharging / EV.speed;
+							if (reqBat > EV.currentBattery) {
+								EV.route.push({type: 'charge', at: node, time: cT, battery: cB});
+								cT += (reqBat - EV.currentBattery) / EV.charging;
+								EV.route.push({type: 'discharge', at: node, time: cT, battery: reqBat > EV.currentBattery ? reqBat : EV.currentBattery});
+							}
+							EV.route.push({type: 'travel', from: lN, to: node, time: cT, battery: cB});
+							cT += graph[node][lN] / EV.speed;
+							cB -= reqBat;
+							if (cB < 0) cB = 0;
+							// do stuff
+							lN = node;
+						});
+					}
 					return time;
 				}).reduce((a, b) => a < b ? b : a, 0);
 			}
@@ -431,7 +450,8 @@
 					graph[edge.to][edge.from] = edge.weight;
 				});
 
-				outputEvents = algorithm(graph, info.EVs);
+				if (debug) heuristic(graph, info.EVs, true);
+				else algorithm(graph, info.EVs);
 			}
 
 			function animate (inf) {
@@ -441,19 +461,22 @@
 					if (lastNode.type === 'travel') temp += inf.edges.find(edge => (edge.from === lastNode.from && edge.to === lastNode.to) || (edge.to === lastNode.from && edge.from === lastNode.to)).weight / cur.speed;
 					return acc > temp ? acc : temp;
 				}, 0);
-				const skew = 30 / lastTime;
+				const skew = 10 / lastTime;
 				console.log(lastTime, skew);
 				let _time = 0;
 				animation = setInterval(() => {
-					draw(inf, Object.values(inf.EVs), _time++ / 30 / skew);
-					if (_time > frameRate * 30) {
+					draw(inf, Object.values(inf.EVs), _time++ / 10 / skew);
+					if (_time > frameRate * 10) {
 						clearInterval(animation);
 						console.log('Done');
 					}
 				}, 1000  * skew / frameRate);
 			}
 
-			if (debug) animate(info);
+			if (debug) {
+				run();
+				animate(info);
+			}
 
 		</script>
 
