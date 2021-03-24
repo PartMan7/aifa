@@ -112,10 +112,9 @@
 						"source": "V1",
 						"currentNode": "V1",
 						"destination": "V8",
-						"initBattery": 80,
-						"currentBattery": 80,
+						"initBattery": 8,
 						"charging": 2,
-						"discharging": 15,
+						"discharging": 4,
 						"max": 100,
 						"speed": 10,
 						"isCharging": true,
@@ -132,7 +131,6 @@
 						"currentNode": "V2",
 						"destination": "V8",
 						"initBattery": 20,
-						"currentBattery": 20,
 						"charging": 10,
 						"discharging": 20,
 						"max": 200,
@@ -146,7 +144,6 @@
 						"currentNode": "V3",
 						"destination": "V6",
 						"initBattery": 4,
-						"currentBattery": 4,
 						"charging": 5,
 						"discharging": 20,
 						"max": 120,
@@ -160,7 +157,6 @@
 						"currentNode": "V4",
 						"destination": "V1",
 						"initBattery": 4,
-						"currentBattery": 4,
 						"charging": 2,
 						"discharging": 3,
 						"max": 100,
@@ -264,7 +260,7 @@
 							let onEdge = info.edges.find(edge => (edge.from === last.from && edge.to === last.to) || (edge.to === last.from && edge.from === last.to)), progress = (time - last.time) * veh.speed / onEdge.weight;
 							if (progress > 1) progress = 1;
 							veh.pos = progress === 1 ? `${last.to}` : `${last.from} to ${last.to}`;
-							veh.currentBattery = last.battery - ([time - last.time, onEdge.weight / veh.speed].sort((a, b) => a - b)[0]) * veh.discharging;
+							veh.currentBattery = last.battery - ([time - last.time, onEdge.weight / veh.speed].sort((a, b) => a - b)[0]) * veh.speed / veh.discharging;
 							if (veh.currentBattery < 0) veh.currentBattery = 0; // Rounding errors
 							vCoords = Array.from({length: 2}).map((n, i) => ((1 - progress) * info.nodepos[last.from][i] + progress * info.nodepos[last.to][i]));
 							break;
@@ -371,7 +367,7 @@
 
 				return Object.keys(EVs).map(car => {
 					let EV = EVs[car];
-					const maxDist = EV.max / EV.discharging;
+					const maxDist = EV.max * EV.discharging;
 
 					// Start Dijkstra
 					const distances = {}, parents = {}, iterate = [];
@@ -382,7 +378,7 @@
 					distances[EV.currentNode] = 0;
 					parents[EV.currentNode] = null;
 					while (iterate.length) {
-						let min = largeNum, minCity = null;
+						let min = largeNum + 1, minCity = null;
 						iterate.forEach(city => {
 							let dist = distances[city];
 							if (dist < min) {
@@ -404,14 +400,15 @@
 					while (parents[chain[0]]) chain.unshift(parents[chain[0]]);
 					let time = 0;
 					time += distances[EV.destination] / EV.speed; // Transport time
-					let requiredBattery = distances[EV.destination] * EV.discharging - EV.currentBattery;
+					let requiredBattery = distances[EV.destination] / EV.discharging - EV.currentBattery;
 					time += requiredBattery / EV.charging; // Required charging time
 					if (animated) {
 						// generate route for animation purposes
 						let lN = null, cT = 0, cB = EV.initBattery;
+						if (chain.length === 1) console.log(parents, distances);
 						chain.forEach(node => {
 							if (node === chain[0]) return lN = node;
-							let reqBat = graph[node][lN] * EV.discharging / EV.speed;
+							let reqBat = graph[node][lN] / EV.discharging;
 							if (reqBat > cB) {
 								EV.route.push({type: 'charge', at: lN, time: cT, battery: cB});
 								cT += (reqBat - cB) / EV.charging;
