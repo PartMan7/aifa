@@ -134,7 +134,7 @@
 						"initBattery": 20,
 						"currentBattery": 20,
 						"charging": 10,
-						"discharging": 11,
+						"discharging": 20,
 						"max": 200,
 						"speed": 20,
 						"isCharging": false,
@@ -147,8 +147,8 @@
 						"destination": "V6",
 						"initBattery": 4,
 						"currentBattery": 4,
-						"charging": 1,
-						"discharging": 2,
+						"charging": 5,
+						"discharging": 20,
 						"max": 120,
 						"speed": 15,
 						"isCharging": false,
@@ -265,7 +265,7 @@
 							if (progress > 1) progress = 1;
 							veh.pos = progress === 1 ? `${last.to}` : `${last.from} to ${last.to}`;
 							veh.currentBattery = last.battery - ([time - last.time, onEdge.weight / veh.speed].sort((a, b) => a - b)[0]) * veh.discharging;
-							if (veh.currentBattery < 0) alert(veh.currentBattery = 0); // Should NEVER happen
+							if (veh.currentBattery < 0) veh.currentBattery = 0; // Rounding errors
 							vCoords = Array.from({length: 2}).map((n, i) => ((1 - progress) * info.nodepos[last.from][i] + progress * info.nodepos[last.to][i]));
 							break;
 						}
@@ -408,16 +408,15 @@
 						chain.forEach(node => {
 							if (node === chain[0]) return lN = node;
 							let reqBat = graph[node][lN] * EV.discharging / EV.speed;
-							if (reqBat > EV.currentBattery) {
-								EV.route.push({type: 'charge', at: node, time: cT, battery: cB});
-								cT += (reqBat - EV.currentBattery) / EV.charging;
-								EV.route.push({type: 'discharge', at: node, time: cT, battery: reqBat > EV.currentBattery ? reqBat : EV.currentBattery});
+							if (reqBat > cB) {
+								EV.route.push({type: 'charge', at: lN, time: cT, battery: cB});
+								cT += (reqBat - cB) / EV.charging;
+								cB = reqBat;
+								EV.route.push({type: 'discharge', at: lN, time: cT, battery: cB});
 							}
 							EV.route.push({type: 'travel', from: lN, to: node, time: cT, battery: cB});
 							cT += graph[node][lN] / EV.speed;
 							cB -= reqBat;
-							if (cB < 0) cB = 0;
-							// do stuff
 							lN = node;
 						});
 					}
@@ -462,7 +461,6 @@
 					return acc > temp ? acc : temp;
 				}, 0);
 				const skew = 10 / lastTime;
-				console.log(lastTime, skew);
 				let _time = 0;
 				animation = setInterval(() => {
 					draw(inf, Object.values(inf.EVs), _time++ / 10 / skew);
