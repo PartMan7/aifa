@@ -393,7 +393,6 @@
 					}
 					let chain = [EV.destination]; // Get Dijkstra's optimal path
 					while (parents[chain[0]]) chain.unshift(parents[chain[0]]);
-					// console.log(chain, parents, distances);
 					let time = 0;
 					time += distances[EV.destination] / EV.speed; // Transport time
 					let requiredBattery = distances[EV.destination] / EV.discharging - EV.currentBattery;
