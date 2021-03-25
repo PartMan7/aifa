@@ -64,9 +64,8 @@
 				margin-left: margin-right: 5px;
 			}
 		</style>
-
 		<script>
-			const debug = true;
+			const sample = true;
 
 			const $ = (id) => document.getElementById(id);
 
@@ -90,7 +89,7 @@
 				nodepos: {}
 			}, animation;
 
-			if (debug) {
+			if (sample) {
 				info.nodes = Array.from({length: 8}).map((n, i) => `V${i + 1}`);
 				info.edges = [
 					{ from: 'V1', to: 'V2', weight: 8 },
@@ -307,7 +306,7 @@
 			}
 
 			function setnodes () {
-				let txt, num = debug ? 8 : parseInt(txt = $('nodenum').value);
+				let txt, num = sample ? 8 : parseInt(txt = $('nodenum').value);
 				if (isNaN(num) || num < 1) return alert(`Invalid number of nodes (${txt})`);
 				info.nodes = [];
 				for (let i = 0; i < num; i++) info.nodes.push(`V${i + 1}`);
@@ -322,7 +321,7 @@
 			}
 
 			function generate () {
-				if (!debug) {
+				if (!sample) {
 					let inputs = document.getElementsByName('edge');
 					let data = {
 						nodes: info.nodes.map(node => ({id: node}))
@@ -347,8 +346,8 @@
 			}
 
 			function setevs () {
-				let txt, num = debug ? 4 : parseInt(txt = $('evnum').value);
-				if (!debug) {
+				let txt, num = sample ? 4 : parseInt(txt = $('evnum').value);
+				if (!sample) {
 					if (isNaN(num) || num < 1) return alert(`Invalid number of vehicles (${txt})`);
 					info.EVs = {};
 					for (let i = 0; i < num; i++) info.EVs[`P${i + 1}`] = {};
@@ -405,7 +404,6 @@
 					if (animated) {
 						// generate route for animation purposes
 						let lN = null, cT = 0, cB = EV.initBattery;
-						if (chain.length === 1) console.log(parents, distances);
 						chain.forEach(node => {
 							if (node === chain[0]) return lN = node;
 							let reqBat = graph[node][lN] / EV.discharging;
@@ -426,7 +424,7 @@
 			}
 
 			function run () {
-				if (!debug) {
+				if (!sample) {
 					for (let i = 0; i < Object.keys(info.EVs).length; i++) {
 						let label = `P${i + 1}`, EV = info.EVs[label];
 						EV.source = $(`${label}source`).value.trim();
@@ -450,7 +448,7 @@
 					graph[edge.to][edge.from] = edge.weight;
 				});
 
-				if (debug) heuristic(graph, info.EVs, true);
+				if (sample) heuristic(graph, info.EVs, true);
 				else algorithm(graph, info.EVs);
 			}
 
@@ -461,23 +459,18 @@
 					if (lastNode.type === 'travel') temp += inf.edges.find(edge => (edge.from === lastNode.from && edge.to === lastNode.to) || (edge.to === lastNode.from && edge.from === lastNode.to)).weight / cur.speed;
 					return acc > temp ? acc : temp;
 				}, 0);
-				let _time = 0, _init = Date.now();
+				let _time = 0;
 				animation = setInterval(() => {
 				draw(inf, Object.values(inf.EVs), _time++ * lastTime * 1000 / aniLength / frameRate);
-					if (_time * 1000 > aniLength * frameRate) {
-						clearInterval(animation);
-						console.log(Date.now() - _init);
-					}
+					if (_time * 1000 > aniLength * frameRate) clearInterval(animation);
 				}, 1 / frameRate);
 			}
 
-			if (debug) {
+			if (sample) {
 				run();
 				animate(info);
 			}
-
 		</script>
-
 	</head>
 	<body>
 		<div id="container"><canvas id="canvas" width="300px" height="500px">Unsupported browser, please update</canvas></div>
