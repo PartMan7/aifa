@@ -22,6 +22,8 @@ The script runs on the assumption that the user input data forms a valid graph, 
 
 This script has zero external dependencies, and can be run without an internet connection after the initial download.
 
+Additionally, if you wish to view the working of the heuristic function alone, you may instead open `heuristic.html`. The usage is identical to `index.html`.
+
 ## Summary
 The project can be broken into four major parts:
 

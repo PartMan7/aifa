@@ -117,12 +117,7 @@
 						"max": 100,
 						"speed": 10,
 						"isCharging": true,
-						"route": [/*
-							{type: 'travel', from: 'V1', to: 'V4', time: 0, battery: 80},
-							{type: 'charge', at: 'V4', time: 4, battery: 74},
-							{type: 'discharge', at: 'V4', time: 5, battery: 76},
-							{type: 'travel', from: 'V4', to: 'V5', time: 5, battery: 76}
-						*/]
+						"route": []
 					},
 					"P2": {
 						"name": "P2",
@@ -448,8 +443,7 @@
 					graph[edge.to][edge.from] = edge.weight;
 				});
 
-				if (sample) heuristic(graph, info.EVs, true);
-				else algorithm(graph, info.EVs);
+				heuristic(graph, info.EVs, true);
 			}
 
 			function animate (inf) {
