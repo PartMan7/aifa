@@ -167,7 +167,6 @@
 						}
 					}
 					run();
-					animate(info);
 				}
 			}
 
@@ -332,7 +331,7 @@
 						const val = parseInt(edge.value);
 						if (isNaN(val)) return alert(`[${edge.id.split('|').join('-')}] ${edge.value} is not a valid number.`);
 						let coords = edge.id.split('|');
-						info.edges.push({ from: coords[0], to: coords[1], weight: String(val) });
+						info.edges.push({ from: coords[0], to: coords[1], weight: val });
 					}
 					data.edges = info.edges;
 					info.EVs = {};
@@ -394,6 +393,7 @@
 					}
 					let chain = [EV.destination]; // Get Dijkstra's optimal path
 					while (parents[chain[0]]) chain.unshift(parents[chain[0]]);
+					// console.log(chain, parents, distances);
 					let time = 0;
 					time += distances[EV.destination] / EV.speed; // Transport time
 					let requiredBattery = distances[EV.destination] / EV.discharging - EV.currentBattery;
@@ -423,21 +423,24 @@
 			function run () {
 				if (!sample) {
 					for (let i = 0; i < Object.keys(info.EVs).length; i++) {
-						let label = `P${i + 1}`, EV = info.EVs[label];
+						let label = `P${i + 1}`;
+						info.EVs[label] = {route: []};
+						let EV = info.EVs[label];
 						EV.source = $(`${label}source`).value.trim();
+						EV.currentNode = EV.source;
 						EV.destination = $(`${label}dest`).value.trim();
 						EV.currentBattery = EV.initBattery = abs(parseFloat($(`${label}init`).value.trim()));
 						EV.charging = abs(parseFloat($(`${label}charge`).value.trim()));
 						EV.discharging = abs(parseFloat($(`${label}discharge`).value.trim()));
 						EV.max = abs(parseFloat($(`${label}max`).value.trim()));
 						EV.speed = abs(parseFloat($(`${label}speed`).value.trim()));
+						EV.name = label;
 						if (['source', 'destination'].find(t => !info.nodes.includes(EV[t]))) return alert(`Invalid source / destination [${label}]`);
 						if (['initBattery', 'charging', 'discharging', 'max', 'speed'].find(t => isNaN(EV[t]))) return alert(`Invalid quantity value in [${label}]`);
 					}
 				}
 
 				// generate graph
-
 				const graph = {};
 				info.nodes.forEach(node => graph[node] = {});
 				info.edges.forEach(edge => {
@@ -446,6 +449,7 @@
 				});
 
 				heuristic(graph, info.EVs, true);
+				animate(info);
 			}
 
 			function animate (inf) {
