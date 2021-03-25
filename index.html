@@ -61,7 +61,8 @@
 
 			div.inline {
 				display: inline-block;
-				margin-left: margin-right: 5px;
+				margin-left: 5px;
+				margin-right: 5px;
 			}
 		</style>
 		<script>
@@ -281,7 +282,7 @@
 					let percentage = round(vehs[i].currentBattery / vehs[i].max * 100);
 					ctx.textAlign = 'center';
 					ctx.fillStyle = `rgb(${colours[i].join(', ')})`;
-					ctx.fillRect(i * 300 / amt + 0.5, 500, 74.5, -2 * percentage);
+					ctx.fillRect(i * 300 / amt + 0.5, 500, 300 / amt - 0.5, -2 * percentage);
 					ctx.beginPath();
 					ctx.arc((i + 0.5) * 300 / amt, 320, 5, 0, 2 * PI, false);
 					ctx.fill();
