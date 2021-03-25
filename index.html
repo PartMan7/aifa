@@ -259,7 +259,7 @@
 							veh.isCharging = false;
 							let onEdge = info.edges.find(edge => (edge.from === last.from && edge.to === last.to) || (edge.to === last.from && edge.from === last.to)), progress = (time - last.time) * veh.speed / onEdge.weight;
 							if (progress > 1) progress = 1;
-							veh.pos = progress === 1 ? `${last.to}` : `${last.from} to ${last.to}`;
+							veh.pos = progress >= 0.99 ? `${last.to}` : `${last.from} to ${last.to}`;
 							veh.currentBattery = last.battery - ([time - last.time, onEdge.weight / veh.speed].sort((a, b) => a - b)[0]) * veh.speed / veh.discharging;
 							if (veh.currentBattery < 0) veh.currentBattery = 0; // Rounding errors
 							vCoords = Array.from({length: 2}).map((n, i) => ((1 - progress) * info.nodepos[last.from][i] + progress * info.nodepos[last.to][i]));
