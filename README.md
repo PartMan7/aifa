@@ -26,14 +26,18 @@ This script has zero external dependencies, and can be run without an internet c
 The project can be broken into four major parts:
 
 a) Base HTML / CSS
+
    This part is simply the skeleton of the code, and provides the elements for the user to interact with. It also formats the styles of all elements in the page.
    
 
 b) JS - Interactivity
+
    This is the portion of the code that is responsible for manipulating and collecting user input. It handles the visibility settings of the form elements, collects the data the user has entered, and runs simple validation scripts. Functions: setNodes(), generate(), setevs(), run()
    
 c) JS - Algorithm
+
    This is the core of the page - all of the processing and pathfinding occurs here. The details on how this works can be found below. Functions: heuristic(), algorithm()
    
 d) JS - Animation
+
    This is the portion of the code that animates the results of the algorithm. It renders the results and the shortest path in a user-friendly animation, along with a menu describing positions and battery states. Functions: draw(), animate()
