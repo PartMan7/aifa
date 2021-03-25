@@ -124,12 +124,7 @@
 							"max": 100,
 							"speed": 10,
 							"isCharging": true,
-							"route": [/*
-								{type: 'travel', from: 'V1', to: 'V4', time: 0, battery: 80},
-								{type: 'charge', at: 'V4', time: 4, battery: 74},
-								{type: 'discharge', at: 'V4', time: 5, battery: 76},
-								{type: 'travel', from: 'V4', to: 'V5', time: 5, battery: 76}
-							*/]
+							"route": []
 						},
 						"P2": {
 							"name": "P2",
@@ -172,7 +167,6 @@
 						}
 					}
 					run();
-					animate(info);
 				}
 			}
 
@@ -337,7 +331,7 @@
 						const val = parseInt(edge.value);
 						if (isNaN(val)) return alert(`[${edge.id.split('|').join('-')}] ${edge.value} is not a valid number.`);
 						let coords = edge.id.split('|');
-						info.edges.push({ from: coords[0], to: coords[1], weight: String(val) });
+						info.edges.push({ from: coords[0], to: coords[1], weight: val });
 					}
 					data.edges = info.edges;
 					info.EVs = {};
@@ -428,21 +422,24 @@
 			function run () {
 				if (!sample) {
 					for (let i = 0; i < Object.keys(info.EVs).length; i++) {
-						let label = `P${i + 1}`, EV = info.EVs[label];
+						let label = `P${i + 1}`;
+						info.EVs[label] = {route: []};
+						let EV = info.EVs[label];
 						EV.source = $(`${label}source`).value.trim();
+						EV.currentNode = EV.source;
 						EV.destination = $(`${label}dest`).value.trim();
 						EV.currentBattery = EV.initBattery = abs(parseFloat($(`${label}init`).value.trim()));
 						EV.charging = abs(parseFloat($(`${label}charge`).value.trim()));
 						EV.discharging = abs(parseFloat($(`${label}discharge`).value.trim()));
 						EV.max = abs(parseFloat($(`${label}max`).value.trim()));
 						EV.speed = abs(parseFloat($(`${label}speed`).value.trim()));
+						EV.name = label;
 						if (['source', 'destination'].find(t => !info.nodes.includes(EV[t]))) return alert(`Invalid source / destination [${label}]`);
 						if (['initBattery', 'charging', 'discharging', 'max', 'speed'].find(t => isNaN(EV[t]))) return alert(`Invalid quantity value in [${label}]`);
 					}
 				}
 
 				// generate graph
-
 				const graph = {};
 				info.nodes.forEach(node => graph[node] = {});
 				info.edges.forEach(edge => {
@@ -452,6 +449,7 @@
 
 				if (sample) heuristic(graph, info.EVs, true);
 				else algorithm(graph, info.EVs);
+				animate(info);
 			}
 
 			function animate (inf) {
