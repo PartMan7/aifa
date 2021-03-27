@@ -204,7 +204,7 @@
 				nodepos: {}
 			}, animation;
 
-			let ctx;
+			let ctx, open, parents;
 
 			window.onload = () => {
 				ctx = $('canvas').getContext('2d');
@@ -212,8 +212,8 @@
 				ctx.textAlign = 'left';
 				sample = confirm(`Would you like to use the supplied sample case?`);
 				if (sample) {
-					info.nodes = Array.from({length: 8}).map((n, i) => `V${i + 1}`);
-					info.edges = [
+					info.nodes = Array.from({ length: /* 8 */ 4 }).map((n, i) => `V${i + 1}`);
+					/*info.edges = [
 						{ from: 'V1', to: 'V2', weight: 8 },
 						{ from: 'V1', to: 'V4', weight: 4 },
 						{ from: 'V1', to: 'V5', weight: 10 },
@@ -226,8 +226,15 @@
 						{ from: 'V6', to: 'V7', weight: 1 },
 						{ from: 'V6', to: 'V8', weight: 2 },
 						{ from: 'V7', to: 'V8', weight: 5 }
+					]*/
+					info.edges = [
+						{ from: 'V1', to: 'V2', weight: 6 },
+						{ from: 'V1', to: 'V3', weight: 5 },
+						{ from: 'V1', to: 'V4', weight: 3 },
+						{ from: 'V2', to: 'V3', weight: 4 },
+						{ from: 'V3', to: 'V4', weight: 7 }
 					]
-					info.EVs = {
+					/*info.EVs = {
 						"P1": {
 							"name": "P1",
 							"source": "V1",
@@ -277,6 +284,34 @@
 							"discharging": 3,
 							"max": 100,
 							"speed": 12,
+							"isCharging": '',
+							"route": []
+						}
+					}*/
+					info.EVs = {
+						"P1": {
+							"name": "P1",
+							"source": "V1",
+							"pos": "V1",
+							"destination": "V8",
+							"initBattery": 8,
+							"charging": 2,
+							"discharging": 4,
+							"max": 100,
+							"speed": 10,
+							"isCharging": '',
+							"route": []
+						},
+						"P2": {
+							"name": "P2",
+							"source": "V2",
+							"pos": "V2",
+							"destination": "V8",
+							"initBattery": 9,
+							"charging": 10,
+							"discharging": 1,
+							"max": 30,
+							"speed": 20,
 							"isCharging": '',
 							"route": []
 						}
@@ -613,7 +648,8 @@
 				// to return a valid solution for any solvable case, for a minuscule amount of cases the path will not be optimal.
 
 				// Standard A-star code
-				const open = new queue([{ state: STATE.stringify(EVs), f: 0, g: 0, parent: null }]), parents = [];
+				open = new queue([{ state: STATE.stringify(EVs), f: 0, g: 0, parent: null }]);
+				parents = [];
 
 				// Node structure: state<vehicle_info>, f<f_value>, g<g_value>, parent<parent_node>
 				
