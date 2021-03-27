@@ -122,10 +122,10 @@
 						// tV1V4#567
 						// w#567
 					});
-					return out;
+					return Object.values(out);
 				},
 				stringify: function (EVs) {
-					return Object.values(EVs).map(EV => {
+					return EVs.map(EV => {
 						let statString = EV.status.type;
 						if (statString === 't') statString += (EV.status.from + EV.status.to);
 						return [EV.name, EV.charging, EV.discharging, EV.speed, EV.initBattery, EV.currentBattery, EV.max, EV.source, EV.pos, EV.destination, EV.isCharging, statString + `#${EV.status.time}`].join(',');
@@ -490,8 +490,7 @@
 				// since with the constraint removed, every car's optimal path can be calculated independently.
 				// The heuristic value is simply the maximum of the optimal times for each car.
 
-				return Object.keys(EVs).map(car => {
-					let EV = EVs[car];
+				return EVs.map(EV => {
 					const maxDist = EV.max * EV.discharging;
 
 					// Start Dijkstra
@@ -621,10 +620,11 @@
 				while (open.length) {
 					let current = open.shift();
 					let unpack = STATE.parse(current.state);
+					// console.log(unpack);
 					if (unpack.reduce((acc, veh) => acc && veh.pos === veh.destination, true)) {
 						// Goal state
 						// Run route calculations
-						// ICMP
+						console.log(open, parents);
 						return;
 					}
 					unpack.forEach(veh => {
@@ -656,17 +656,18 @@
 									time: deltaTime
 								}
 								timeTravel(clone);
-								let tempG = unpack.g + delt, tempH = heuristic(graph, clone), tempF = tempG + tempH;
+								let tempG = unpack.g + deltaTime, tempH = heuristic(graph, clone), tempF = tempG + tempH;
 								open.add({ state: STATE.stringify(clone), f: tempF, g: tempG, parent: current });
 							}
 							else if (canCharge) {
-								let dTime = (graph[pos][n1] / veh.discharging - currentBattery) / veh.charging;
+								// Child of the state where the vehicle charges for a 'significant' time interval
+								let dTime = (graph[pos][n1] / veh.discharging - veh.currentBattery) / veh.charging;
 								clone.status = {
 									type: 'w',
 									time: dTime
 								}
 								timeTravel(clone);
-								let tempG = unpack.g + delt, tempH = heuristic(graph, clone), tempF = tempG + tempH;
+								let tempG = unpack.g + dTime, tempH = heuristic(graph, clone), tempF = tempG + tempH;
 								open.add({ state: STATE.stringify(clone), f: tempF, g: tempG, parent: current });
 							}
 						});
@@ -702,8 +703,8 @@
 					graph[edge.to][edge.from] = edge.weight;
 				});
 
-				if (sample) algorithm(graph, info.EVs);
-				else algorithm(graph, info.EVs);
+				Object.values(info.EVs).forEach(EV => EV.status = { type: 'w', time: 0 });
+				algorithm(graph, Object.values(info.EVs));
 				animate(info);
 			}
 
