@@ -85,9 +85,10 @@
 
 			const STATE = {
 				parse: function (text) {
+					// status: c-timeLeft|t-FT-timeLeft|w-timeLeft
 					let out = {};
 					text.split('|').forEach(vh => {
-						let [name, charging, discharging, speed, initBattery, currentBattery, max, source, pos, destination, isCharging] = vh.split(',');
+						let [name, charging, discharging, speed, initBattery, currentBattery, max, source, pos, destination, isCharging, status] = vh.split(',');
 						out[name] = {
 							name: name,
 							charging: Number(charging),
@@ -99,13 +100,36 @@
 							source: source,
 							pos: pos,
 							destination: destination,
-							isCharging: isCharging
+							isCharging: isCharging,
+							status: null
 						}
+						out[name].status = {
+							type: status[0]
+						}
+						switch (status[0]) {
+							case 'c': out[name].status.time = Number(status.substr(2)); break;
+							case 't': {
+								let split = status.substr(1).split('#');
+								let [n0, n1, n2] = split[0].split('V');
+								out[name].status.from = 'V' + n1;
+								out[name].status.to = 'V' + n2;
+								out[name].status.time = Number(split[1]);
+								break;
+							}
+							case 'w': out[name].status.time = Number(status.substr(2)); break;
+						}
+						// c#145
+						// tV1V4#567
+						// w#567
 					});
 					return out;
 				},
 				stringify: function (EVs) {
-					return Object.values(EVs).map(EV => [EV.name, EV.charging, EV.discharging, EV.speed, EV.initBattery, EV.currentBattery, EV.max, EV.source, EV.pos, EV.destination, EV.isCharging].join(',')).join('|');
+					return Object.values(EVs).map(EV => {
+						let statString = EV.status.type;
+						if (statString === 't') statString += (EV.status.from + EV.status.to);
+						return [EV.name, EV.charging, EV.discharging, EV.speed, EV.initBattery, EV.currentBattery, EV.max, EV.source, EV.pos, EV.destination, EV.isCharging, statString + `#${EV.status.time}`].join(',');
+					}).join('|');
 				}
 			}
 
@@ -126,6 +150,7 @@
 							if (found.g > node.g) {
 								found.g = node.g;
 								found.parent = node.parent;
+								found.f = node.f;
 							}
 							return;
 						}
@@ -134,7 +159,6 @@
 						loop: for (i = 0; i < this.length; i++) if (this._values[i][this.key] >= key) {
 							flag = false;
 							break loop;
-							console.log(i);
 						}
 						if (flag) this._values.push(node);
 						else this._values.splice(i, 0, node);
@@ -333,19 +357,33 @@
 							veh.pos = last.at;
 							veh.currentBattery = last.battery + (time - last.time) * veh.charging;
 							if (veh.currentBattery > veh.max) veh.currentBattery = veh.max;
+							veh.status = {
+								type: '',
+								time: '?'
+							}
 							break;
 						}
 						case 'discharge': {
 							veh.isCharging = '';
 							vCoords = info.nodepos[last.at];
 							veh.pos = last.at;
+							veh.status = {
+								type: 'w',
+								time: '?'
+							}
 							break;
 						}
 						case 'travel': {
 							veh.isCharging = '';
 							let onEdge = info.edges.find(edge => (edge.from === last.from && edge.to === last.to) || (edge.to === last.from && edge.from === last.to)), progress = (time - last.time) * veh.speed / onEdge.weight;
 							if (progress > 1) progress = 1;
-							veh.pos = progress >= 0.99 ? `${last.to}` : `${last.from} to ${last.to}`;
+							veh.pos = progress >= 0.99 ? last.to : ``;
+							veh.status = {
+								type: 't',
+								from: last.from,
+								to: last.to,
+								time: onEdge.weight / veh.speed
+							}
 							veh.currentBattery = last.battery - ([time - last.time, onEdge.weight / veh.speed].sort((a, b) => a - b)[0]) * veh.speed / veh.discharging;
 							if (veh.currentBattery < 0) veh.currentBattery = 0; // Rounding errors
 							vCoords = Array.from({length: 2}).map((n, i) => ((1 - progress) * info.nodepos[last.from][i] + progress * info.nodepos[last.to][i]));
@@ -383,8 +421,9 @@
 					ctx.fillText(txt, (i + 0.5) * 300 / amt, 360);
 					ctx.strokeText(txt, (i + 0.5) * 300 / amt, 360);
 					ctx.font = 'bold 10px Arial';
-					ctx.fillText(vehs[i].pos, (i + 0.5) * 300 / amt, 400);
-					ctx.strokeText(vehs[i].pos, (i + 0.5) * 300 / amt, 400);
+					let pos = vehs[i].pos || `${vehs[i].status.from} to ${vehs[i].status.to}`;
+					ctx.fillText(pos, (i + 0.5) * 300 / amt, 400);
+					ctx.strokeText(pos, (i + 0.5) * 300 / amt, 400);
 					ctx.font = 'bold 25px Arial';
 					ctx.fillText(`${percentage}%`, (i + 0.5) * 300 / amt, 440);
 					ctx.strokeText(`${percentage}%`, (i + 0.5) * 300 / amt, 440);
@@ -510,6 +549,64 @@
 				}).reduce((a, b) => a < b ? b : a, 0);
 			}
 
+			function timeTravel (input) {
+				// Somewhat unorthodox function. Effectively, it travels through time to generate the next 'significant' node. In simpler
+				// words, it simply takes a given node state and finds the next node where a choice can be made. Note that this does not
+				// include edge-fractinoal charge times, since we quantize time into discrete pieces by simply considering charging times
+				// of only required segments. This function is mutating.
+				let min = largeNum, veh;
+				for (let i = 0; i < input.length; i++) {
+					let EV = input[i];
+					if (EV.status.time < min) [min, veh] = [EV.status.time, EV];
+				}
+				if (min === largeNum) {
+					console.log(input);
+					return alert(`Something is wrong`);
+				}
+				input.forEach(EV => {
+					if (EV.name === veh.name) {
+						switch (EV.status.type) {
+							case 't': {
+								EV.currentBattery -= EV.speed * EV.status.time / EV.discharging;
+								EV.pos = EV.status.to;
+								break;
+							}
+							case 'c': {
+								EV.currentBattery += EV.charging * EV.status.time;
+								if (EV.currentBattery > EV.max) EV.currentBattery = EV.max;
+								EV.isCharging = '';
+								break;
+							}
+						}
+						EV.status = {
+							type: 'w',
+							time: 0
+						}
+					}
+					else {
+						switch (EV.status.type) {
+							case 't': {
+								EV.currentBattery -= EV.speed * EV.status.time / EV.discharging;
+								if (min === EV.status.time) EV.pos = EV.status.to;
+								break;
+							}
+							case 'c': {
+								EV.currentBattery += EV.charging * EV.status.time;
+								if (EV.currentBattery > EV.max) EV.currentBattery = EV.max;
+								if (min === EV.status.time) EV.isCharging = '';
+								break;
+							}
+							if (min === EV.status.time) EV.status = {
+								type: 'w',
+								time: 0
+							}
+							else EV.status.time -= min;
+						}
+					}
+				});
+				return;
+			}
+
 			function algorithm (graph, EVs) {
 				// Use an A-star algorithm to search for the optimal path
 				// Of note is that this algorithm deals with continuous time intervals by breaking it into a finite number of values simply by
@@ -517,7 +614,9 @@
 				// to return a valid solution for any solvable case, for a minuscule amount of cases the path will not be optimal.
 
 				// Standard A-star code
-				const open = new queue([{ state: STATE.stringify(EVs), f: 0, parent: null }]), parents = [];
+				const open = new queue([{ state: STATE.stringify(EVs), f: 0, g: 0, parent: null }]), parents = [];
+
+				// Node structure: state<vehicle_info>, f<f_value>, g<g_value>, parent<parent_node>
 				
 				while (open.length) {
 					let current = open.shift();
@@ -525,23 +624,50 @@
 					if (unpack.reduce((acc, veh) => acc && veh.pos === veh.destination, true)) {
 						// Goal state
 						// Run route calculations
+						// ICMP
 						return;
 					}
 					unpack.forEach(veh => {
-						if (veh.pos === veh.destination) return;
-						if (veh.pos === '') return;
-						let pos = veh.pos, canCharge = true, cMax = veh.currentBattery * veh.discharging, aMax = veh.max * veh.discharging;
-						if (unpack.find(vh => vh.isCharging === veh.pos)) canCharge = false;
+						if (veh.pos === veh.destination) return; // Has reached destination; no children generated
+						if (veh.status.type === 't') return; // Traveling; cannot generate children
+						let pos = veh.pos, canCharge = true, cMax = veh.currentBattery * veh.discharging, aMax = veh.max * veh.discharging, chV;
+						if (chV = unpack.find(vh => vh.isCharging === veh.pos)) canCharge = false;
+						if (!canCharge) {
+							// Child of the state where the vehicle waits for the current vehicle to charge
+							let clone = STATE.parse(STATE.stringify(unpack)), delt = chV.status.time;
+							clone.status = {
+								type: 'w',
+								time: delt
+							}
+							timeTravel(clone);
+							let tempG = unpack.g + delt, tempH = heuristic(graph, clone), tempF = tempG + tempH;
+							open.add({ state: STATE.stringify(clone), f: tempF, g: tempG, parent: current });
+						}
 						Object.keys(graph[pos]).forEach(n1 => {
 							if (aMax < graph[pos][n1]) return;
-							else if (cMax >= graph[pos][n1]) {
-								// Add child pos-n1 move
-								// Add child to open
+							let clone = STATE.parse(STATE.stringify(unpack));
+							if (cMax >= graph[pos][n1]) {
+								// Child of the state where the vehicle directly leaves on a chosen edge due to having sufficient battery
+								let deltaTime = graph[pos][n1] / veh.speed;
+								clone.status = {
+									type: 't',
+									from: pos,
+									to: n1,
+									time: deltaTime
+								}
+								timeTravel(clone);
+								let tempG = unpack.g + delt, tempH = heuristic(graph, clone), tempF = tempG + tempH;
+								open.add({ state: STATE.stringify(clone), f: tempF, g: tempG, parent: current });
 							}
 							else if (canCharge) {
 								let dTime = (graph[pos][n1] / veh.discharging - currentBattery) / veh.charging;
-								// Create child at t = t+dTime -> pos-n1 move
-								// Add child to open
+								clone.status = {
+									type: 'w',
+									time: dTime
+								}
+								timeTravel(clone);
+								let tempG = unpack.g + delt, tempH = heuristic(graph, clone), tempF = tempG + tempH;
+								open.add({ state: STATE.stringify(clone), f: tempF, g: tempG, parent: current });
 							}
 						});
 					});
@@ -576,7 +702,7 @@
 					graph[edge.to][edge.from] = edge.weight;
 				});
 
-				if (sample) heuristic(graph, info.EVs, true);
+				if (sample) algorithm(graph, info.EVs);
 				else algorithm(graph, info.EVs);
 				animate(info);
 			}
