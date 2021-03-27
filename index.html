@@ -111,9 +111,9 @@
 
 			class queue {
 				// JS Priority Queue implementation, written by PartMan7
-				constructor (key, id, init) {
-					this.key = key;
-					this.id = id;
+				constructor (init) {
+					this.key = 'f';
+					this.id = 'state';
 					this._values = [...(init || [])];
 					this._IDs = new Set(this._values.map(val => val[this.id]));
 					this.length = this._values.length;
@@ -121,7 +121,14 @@
 				add (...nodes) {
 					nodes.forEach(node => {
 						if (node[this.id] == null) throw new Error(`Missing valid ID on node [${node}]`);
-						if (this._IDs.has(node[this.id])) throw new Error(`Element with ID [${node[this.id]}] already present`);
+						if (this._IDs.has(node[this.id])) {
+							let found = this._values.find(val => val[this.id] === node[this.id]);
+							if (found.g > node.g) {
+								found.g = node.g;
+								found.parent = node.parent;
+							}
+							return;
+						}
 						this._IDs.add(node[this.id]);
 						let key = node[this.key], i, flag = true;
 						loop: for (i = 0; i < this.length; i++) if (this._values[i][this.key] >= key) {
@@ -510,8 +517,35 @@
 				// to return a valid solution for any solvable case, for a minuscule amount of cases the path will not be optimal.
 
 				// Standard A-star code
-				const open = [], closed = [{ state: STATE.stringify(EVs), f: 0, parent: null}];
-				// Node structure: {state: string<STATE.stringify>, f: f-val, g: g-val, h: h(STATE.parse(this.state)), parent: node}
+				const open = new queue([{ state: STATE.stringify(EVs), f: 0, parent: null }]), parents = [];
+				
+				while (open.length) {
+					let current = open.shift();
+					let unpack = STATE.parse(current.state);
+					if (unpack.reduce((acc, veh) => acc && veh.pos === veh.destination, true)) {
+						// Goal state
+						// Run route calculations
+						return;
+					}
+					unpack.forEach(veh => {
+						if (veh.pos === veh.destination) return;
+						if (veh.pos === '') return;
+						let pos = veh.pos, canCharge = true, cMax = veh.currentBattery * veh.discharging, aMax = veh.max * veh.discharging;
+						if (unpack.find(vh => vh.isCharging === veh.pos)) canCharge = false;
+						Object.keys(graph[pos]).forEach(n1 => {
+							if (aMax < graph[pos][n1]) return;
+							else if (cMax >= graph[pos][n1]) {
+								// Add child pos-n1 move
+								// Add child to open
+							}
+							else if (canCharge) {
+								let dTime = (graph[pos][n1] / veh.discharging - currentBattery) / veh.charging;
+								// Create child at t = t+dTime -> pos-n1 move
+								// Add child to open
+							}
+						});
+					});
+				}
 			}
 
 			function run () {
