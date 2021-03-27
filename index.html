@@ -83,6 +83,89 @@
 				[ 0, 0, 117 ], [ 128, 128, 128 ]
 			], largeNum = 10000000, frameRate = 100, aniLength = 20000;
 
+			const STATE = {
+				parse: function (text) {
+					let out = {};
+					text.split('|').forEach(vh => {
+						let [name, charging, discharging, speed, initBattery, currentBattery, max, source, pos, destination, isCharging] = vh.split(',');
+						out[name] = {
+							name: name,
+							charging: Number(charging),
+							discharging: Number(discharging),
+							speed: Number(speed),
+							initBattery: Number(initBattery),
+							currentBattery: Number(currentBattery),
+							max: Number(max),
+							source: source,
+							pos: pos,
+							destination: destination,
+							isCharging: isCharging
+						}
+					});
+					return out;
+				},
+				stringify: function (EVs) {
+					return Object.values(EVs).map(EV => [EV.name, EV.charging, EV.discharging, EV.speed, EV.initBattery, EV.currentBattery, EV.max, EV.source, EV.pos, EV.destination, EV.isCharging].join(',')).join('|');
+				}
+			}
+
+			class queue {
+				// JS Priority Queue implementation, written by PartMan7
+				constructor (key, id, init) {
+					this.key = key;
+					this.id = id;
+					this._values = [...(init || [])];
+					this._IDs = new Set(this._values.map(val => val[this.id]));
+					this.length = this._values.length;
+				}
+				add (...nodes) {
+					nodes.forEach(node => {
+						if (node[this.id] == null) throw new Error(`Missing valid ID on node [${node}]`);
+						if (this._IDs.has(node[this.id])) throw new Error(`Element with ID [${node[this.id]}] already present`);
+						this._IDs.add(node[this.id]);
+						let key = node[this.key], i, flag = true;
+						loop: for (i = 0; i < this.length; i++) if (this._values[i][this.key] >= key) {
+							flag = false;
+							break loop;
+							console.log(i);
+						}
+						if (flag) this._values.push(node);
+						else this._values.splice(i, 0, node);
+						this.length++;
+					});
+					return this.length;
+				}
+				remove (...nodes) {
+					nodes.forEach(node => {
+						if (!this._IDs.has(node)) throw new Error(`Element with ID [${node}] not present`);
+					});
+					if (!this.length) return false;
+					looper: while (nodes.length) {
+						for (let i = 0; i < this.length; i++) if (nodes.includes(this._values[i][this.id])) {
+							nodes.splice(nodes.indexOf(this._values[i][this.id]), 1);
+							this._IDs.delete(this._values[i][this.id]);
+							this._values.splice(i, 1);
+							this.length--;
+							continue looper;
+						}
+						return false;
+					}
+					return true;
+				}
+				shift () {
+					if (!this.length) return undefined;
+					this.length--;
+					this._IDs.delete(this._values[0][this.id]);
+					return this._values.shift();
+				}
+				pop () {
+					if (!this.length) return undefined;
+					this.length--;
+					this._IDs.delete(this._values[this.length - 1][this.id]);
+					return this._values.pop();
+				}
+			}
+
 			let info = {
 				nodes: [],
 				edges: [],
@@ -117,53 +200,53 @@
 						"P1": {
 							"name": "P1",
 							"source": "V1",
-							"currentNode": "V1",
+							"pos": "V1",
 							"destination": "V8",
 							"initBattery": 8,
 							"charging": 2,
 							"discharging": 4,
 							"max": 100,
 							"speed": 10,
-							"isCharging": true,
+							"isCharging": '',
 							"route": []
 						},
 						"P2": {
 							"name": "P2",
 							"source": "V2",
-							"currentNode": "V2",
+							"pos": "V2",
 							"destination": "V8",
 							"initBattery": 9,
 							"charging": 10,
 							"discharging": 1,
 							"max": 30,
 							"speed": 20,
-							"isCharging": false,
+							"isCharging": '',
 							"route": []
 						},
 						"P3": {
 							"name": "P3",
 							"source": "V3",
-							"currentNode": "V3",
+							"pos": "V3",
 							"destination": "V6",
 							"initBattery": 4,
 							"charging": 5,
 							"discharging": 20,
 							"max": 120,
 							"speed": 15,
-							"isCharging": false,
+							"isCharging": '',
 							"route": []
 						},
 						"P4": {
 							"name": "P4",
 							"source": "V4",
-							"currentNode": "V4",
+							"pos": "V4",
 							"destination": "V1",
 							"initBattery": 4,
 							"charging": 2,
 							"discharging": 3,
 							"max": 100,
 							"speed": 12,
-							"isCharging": false,
+							"isCharging": '',
 							"route": []
 						}
 					}
@@ -238,7 +321,7 @@
 					veh.pos = veh.source;
 					if (last) switch (last.type) {
 						case 'charge': {
-							veh.isCharging = true;
+							veh.isCharging = last.at;
 							vCoords = info.nodepos[last.at];
 							veh.pos = last.at;
 							veh.currentBattery = last.battery + (time - last.time) * veh.charging;
@@ -246,13 +329,13 @@
 							break;
 						}
 						case 'discharge': {
-							veh.isCharging = false;
+							veh.isCharging = '';
 							vCoords = info.nodepos[last.at];
 							veh.pos = last.at;
 							break;
 						}
 						case 'travel': {
-							veh.isCharging = false;
+							veh.isCharging = '';
 							let onEdge = info.edges.find(edge => (edge.from === last.from && edge.to === last.to) || (edge.to === last.from && edge.from === last.to)), progress = (time - last.time) * veh.speed / onEdge.weight;
 							if (progress > 1) progress = 1;
 							veh.pos = progress >= 0.99 ? `${last.to}` : `${last.from} to ${last.to}`;
@@ -355,7 +438,7 @@
 			}
 
 			function heuristic (graph, EVs, animated) {
-				
+
 				// This heuristic function simply solves the case when the constraint of only one car per
 				// station is removed. It uses Dijkstra's algorithm to find the minimum time in this case, 
 				// since with the constraint removed, every car's optimal path can be calculated independently.
@@ -371,8 +454,8 @@
 						distances[city] = largeNum;
 						iterate.push(city);
 					});
-					distances[EV.currentNode] = 0;
-					parents[EV.currentNode] = null;
+					distances[EV.pos] = 0;
+					parents[EV.pos] = null;
 					while (iterate.length) {
 						let min = largeNum + 1, minCity = null;
 						iterate.forEach(city => {
@@ -420,6 +503,17 @@
 				}).reduce((a, b) => a < b ? b : a, 0);
 			}
 
+			function algorithm (graph, EVs) {
+				// Use an A-star algorithm to search for the optimal path
+				// Of note is that this algorithm deals with continuous time intervals by breaking it into a finite number of values simply by
+				// only considering the minimum time required to cover a single node from the current distance. While this method is guaranteed
+				// to return a valid solution for any solvable case, for a minuscule amount of cases the path will not be optimal.
+
+				// Standard A-star code
+				const open = [], closed = [{ state: STATE.stringify(EVs), f: 0, parent: null}];
+				// Node structure: {state: string<STATE.stringify>, f: f-val, g: g-val, h: h(STATE.parse(this.state)), parent: node}
+			}
+
 			function run () {
 				if (!sample) {
 					for (let i = 0; i < Object.keys(info.EVs).length; i++) {
@@ -427,7 +521,7 @@
 						info.EVs[label] = {route: []};
 						let EV = info.EVs[label];
 						EV.source = $(`${label}source`).value.trim();
-						EV.currentNode = EV.source;
+						EV.pos = EV.source;
 						EV.destination = $(`${label}dest`).value.trim();
 						EV.currentBattery = EV.initBattery = abs(parseFloat($(`${label}init`).value.trim()));
 						EV.charging = abs(parseFloat($(`${label}charge`).value.trim()));
