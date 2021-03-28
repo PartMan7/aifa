@@ -545,7 +545,7 @@
 						if (['initBattery', 'charging', 'discharging', 'max', 'speed'].find(t => isNaN(EV[t]))) return alert(`Invalid quantity value in [${label}]`);
 					}
 				}
-
+				clearInterval(animation);
 				// generate graph
 				const graph = {};
 				info.nodes.forEach(node => graph[node] = {});

@@ -45,4 +45,18 @@ d) JS - Animation
    This is the portion of the code that animates the results of the algorithm. It renders the results and the shortest path in a user-friendly animation, along with a menu describing positions and battery states. Functions: draw(), animate()
 
 
+### Usage
+
+After opening the file in your browser, you will be presented with a popup. If you wish to view the provided sample case, click Yes. Otherwise, click Cancel.
+
+If you used the sample case, you may view the animation again by either clicking the Run button or refreshing the page. If you wish to manually create a scenario, simply refresh the page and click Cancel on the sample box.
+
+Manually entering the information is done in five steps: 
+* Enter in the number of nodes and click `Set`.
+* Fill in the edge values. Values can only be positive numbers or the `-` character (which represents no edge). Once done, click the `Generate map!` button to view the graph. This will display the graph on the left side of the page, and will also open the vehicles menu. If you wish to edit these values after filling in later data, you may do so simply by entering the data and again clicking `Generate map!`.
+* Enter in the number of vehicles and click `Set`.
+* In the fields that pop up below, enter in the information of all the vehicles. The fields are named appropriately. Note that you may need to scroll to view all the fields.
+* Once you're done, hit the `Run` button. It will begin the animation of the solution the code has found. You may re-run this animation by waiting until it ends and then again clicking `Run`.
+
+
 For my thought processes and approach while attempting this problem, refer to [this](THOUGHTS.md).
