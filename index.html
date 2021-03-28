@@ -204,7 +204,7 @@
 				nodepos: {}
 			}, animation;
 
-			let ctx, open, parents;
+			let ctx, open, killer = 0;
 
 			window.onload = () => {
 				ctx = $('canvas').getContext('2d');
@@ -583,11 +583,18 @@
 				}).reduce((a, b) => a < b ? b : a, 0);
 			}
 
+			function vehString (veh) {
+				return `${veh.name}:[${Object.values(veh.status)}] @${veh.pos} [${veh.source}>${veh.destination}]`;
+			}
+
 			function timeTravel (input) {
 				// Somewhat unorthodox function. Effectively, it travels through time to generate the next 'significant' node. In simpler
 				// words, it simply takes a given node state and finds the next node where a choice can be made. Note that this does not
 				// include edge-fractinoal charge times, since we quantize time into discrete pieces by simply considering charging times
 				// of only required segments. This function is mutating.
+				if (killer++ > 20) throw new Error ('');
+				console.log('===========');
+				console.log(input.map(vehString));
 				let min = largeNum, veh;
 				for (let i = 0; i < input.length; i++) {
 					let EV = input[i];
@@ -630,26 +637,27 @@
 								if (min === EV.status.time) EV.isCharging = '';
 								break;
 							}
-							if (min === EV.status.time) EV.status = {
-								type: 'w',
-								time: 0
-							}
-							else EV.status.time -= min;
 						}
+						if (min === EV.status.time) EV.status = {
+							type: 'w',
+							time: 0
+						}
+						else EV.status.time -= min;
 					}
 				});
+				console.log(input.map(vehString));
+				console.log('===========');
 				return;
 			}
 
 			function algorithm (graph, EVs) {
 				// Use an A-star algorithm to search for the optimal path
 				// Of note is that this algorithm deals with continuous time intervals by breaking it into a finite number of values simply by
-				// only considering the minimum time required to cover a single node from the current distance. While this method is guaranteed
+				// only considering the minimum time required to cover a single edge from the current node. While this method is guaranteed
 				// to return a valid solution for any solvable case, for a minuscule amount of cases the path will not be optimal.
 
 				// Standard A-star code
 				open = new queue([{ state: STATE.stringify(EVs), f: 0, g: 0, parent: null }]);
-				parents = [];
 
 				// Node structure: state<vehicle_info>, f<f_value>, g<g_value>, parent<parent_node>
 				
@@ -660,10 +668,10 @@
 					if (unpack.reduce((acc, veh) => acc && veh.pos === veh.destination, true)) {
 						// Goal state
 						// Run route calculations
-						console.log(open, parents);
+						console.log(open);
 						return;
 					}
-					unpack.forEach(veh => {
+					unpack.forEach((veh, idx) => {
 						if (veh.pos === veh.destination) return; // Has reached destination; no children generated
 						if (veh.status.type === 't') return; // Traveling; cannot generate children
 						let pos = veh.pos, canCharge = true, cMax = veh.currentBattery * veh.discharging, aMax = veh.max * veh.discharging, chV;
@@ -671,12 +679,12 @@
 						if (!canCharge) {
 							// Child of the state where the vehicle waits for the current vehicle to charge
 							let clone = STATE.parse(STATE.stringify(unpack)), delt = chV.status.time;
-							clone.status = {
+							clone[idx].status = {
 								type: 'w',
 								time: delt
 							}
 							timeTravel(clone);
-							let tempG = unpack.g + delt, tempH = heuristic(graph, clone), tempF = tempG + tempH;
+							let tempG = current.g + delt, tempH = heuristic(graph, clone), tempF = tempG + temH;
 							open.add({ state: STATE.stringify(clone), f: tempF, g: tempG, parent: current });
 						}
 						Object.keys(graph[pos]).forEach(n1 => {
@@ -685,25 +693,29 @@
 							if (cMax >= graph[pos][n1]) {
 								// Child of the state where the vehicle directly leaves on a chosen edge due to having sufficient battery
 								let deltaTime = graph[pos][n1] / veh.speed;
-								clone.status = {
+								clone[idx].status = {
 									type: 't',
 									from: pos,
 									to: n1,
 									time: deltaTime
 								}
 								timeTravel(clone);
-								let tempG = unpack.g + deltaTime, tempH = heuristic(graph, clone), tempF = tempG + tempH;
+								let tempG = current.g + deltaTime, tempH = heuristic(graph, clone), tempF = tempG + tempH;
+								console.log(tempH, 1);
 								open.add({ state: STATE.stringify(clone), f: tempF, g: tempG, parent: current });
 							}
 							else if (canCharge) {
 								// Child of the state where the vehicle charges for a 'significant' time interval
 								let dTime = (graph[pos][n1] / veh.discharging - veh.currentBattery) / veh.charging;
-								clone.status = {
+								clone[idx].status = {
 									type: 'w',
 									time: dTime
 								}
 								timeTravel(clone);
-								let tempG = unpack.g + dTime, tempH = heuristic(graph, clone), tempF = tempG + tempH;
+								let tempG = current.g + dTime, tempH = heuristic(graph, clone), tempF = tempG + tempH;
+								console.log(JSON.stringify(graph));
+								console.log(JSON.stirngify(clone));
+								console.log(tempH, 2);
 								open.add({ state: STATE.stringify(clone), f: tempF, g: tempG, parent: current });
 							}
 						});
