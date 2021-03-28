@@ -22,7 +22,7 @@ The script runs on the assumption that the user input data forms a valid graph, 
 
 This script has zero external dependencies, and can be run without an internet connection after the initial download.
 
-Different files run different algorithms. These are **heuristic.html** (which demonstrates the heuristic function), *simple.html* (which runs the simple staggered algorithm), and **index.html** (which runs the significant times algorithm). Please note that the advanced searching algorithm is not complete.
+Different files run different algorithms. These are **[heuristic.html]** (which demonstrates the heuristic function), **[simple.html]** (which runs the simple staggered algorithm), and **[index.html]** (which runs the significant times algorithm). Please note that the advanced searching algorithm is not complete.
 
 ## Summary
 The project can be broken into four major parts:
@@ -45,4 +45,4 @@ d) JS - Animation
    This is the portion of the code that animates the results of the algorithm. It renders the results and the shortest path in a user-friendly animation, along with a menu describing positions and battery states. Functions: draw(), animate()
 
 
-For my thought processes and approach while attempting this problem, refer to (this)[THOUGHTS.md].
+For my thought processes and approach while attempting this problem, refer to [this](THOUGHTS.md).

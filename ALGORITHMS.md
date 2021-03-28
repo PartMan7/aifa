@@ -19,7 +19,7 @@ This algorithm, like the previous algorithm, is not guaranteed to generate the f
 In simple terms, a significant time is basically the minimum time required to charge the vehicle until it can travel on a chosen edge from the current city. Therefore, every time a vehicle parks at a city, it generates x + 1 child nodes, where x is the number of edges from that city.
 
 
-For more information on the implementation of these functions, refer to (this file)[THOUGHTS.md].
+For more information on the implementation of these functions, refer to [this file](THOUGHTS.md).
 
 
 <sub>In time complexities, n represents the number of cities, while v represents the number of vehicles.</sub>
