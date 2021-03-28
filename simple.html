@@ -419,12 +419,12 @@
 							if (node === chain[0]) return lN = node;
 							let reqBat = graph[node][lN] / EV.discharging;
 							if (reqBat > cB) {
-								EV.route.push({type: 'charge', at: lN, time: cT, battery: cB});
+								EV.route.push({type: 'charge', at: lN, time: cT, battery: cB });
 								cT += (reqBat - cB) / EV.charging;
 								cB = reqBat;
-								EV.route.push({type: 'wait', at: lN, time: cT, battery: cB});
+								EV.route.push({type: 'wait', at: lN, time: cT, battery: cB });
 							}
-							EV.route.push({type: 'travel', from: lN, to: node, time: cT, battery: cB});
+							EV.route.push({type: 'travel', from: lN, to: node, time: cT, battery: cB });
 							cT += graph[node][lN] / EV.speed;
 							cB -= reqBat;
 							lN = node;
@@ -439,8 +439,7 @@
 				let cities = Object.keys(graph);
 				stagger: while (true) {
 					const chargeMap = {};
-					console.log(loop++);
-					if (loop > 10) return alert(`10 loops crossed, exiting`);
+					if (loop > 10) return alert(`100 loops crossed, exiting`);
 					Object.keys(graph).forEach(city => {
 						chargeMap[city] = [];
 					});
@@ -461,7 +460,6 @@
 							}
 						});
 					});
-					// console.log(JSON.stringify(chargeMap, null, 2));
 					// Handle overlaps
 					let flag = true;
 					for (let x = 0; x < cities.length; x++) {
@@ -473,9 +471,7 @@
 								// Two vehicles attempting to charge at the same time. The vehicle that has a shorter remaining path is delayed.
 								// Even if there are more than two, the next pair will be staggered on the next iteration.
 								// The same vehicle may be delayed multiple times, depending on the situation.
-								console.log(e1.name, e2.name, city);
 								let delta = e1.to - e2.from, [EV1, EV2] = [e1.name, e2.name].map(label => EVs.find(EV => EV.name === label));
-								console.log(EV1.route, EV2.route);
 								let newEVs = [EV1, EV2].map(EV => deepClone(EV));
 								newEVs.forEach(EV => {
 									EV.pos = city;
@@ -499,7 +495,6 @@
 								let hr = heuristic(graph, newEVs, 'array');
 								if (hr[0] >= hr[1]) {
 									// First vehicle charges
-									console.log(`Updated ${EV2.name}`);
 									for (let k = 0; k < EV2.route.length; k++) {
 										let evt = EV2.route[k];
 										if (evt.time < e2.from) continue;
@@ -507,8 +502,6 @@
 									}
 								} else {
 									// Second vehicle charges
-									console.log(`Updated ${EV1.name}!`);
-									console.log(delta, e2.from);
 									let switchFlag = false;
 									for (let k = 0; k < EV1.route.length; k++) {
 										let evt = EV1.route[k];
@@ -516,7 +509,10 @@
 										if (evt.time >= e2.from) {
 											if (!switchFlag) {
 												switchFlag = true;
-												EV1.route.splice(k, 0, { type: 'wait', time: e2.from });
+												let btt = evt.battery;
+												btt += EV1.charging * e2.from - evt.time;
+												EV1.route.splice(k, 0, { type: 'charge', time: e2.to, at: city, battery: btt });
+												EV1.route.splice(k, 0, { type: 'wait', time: e2.from, at: city, battery: btt });
 											}
 											continue;
 										}
