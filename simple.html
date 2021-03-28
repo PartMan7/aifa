@@ -510,7 +510,6 @@
 										if (!switchFlag) {
 											switchFlag = k;
 											let btt = evt.battery;
-											btt += EV1.charging * e2.from - evt.time;
 											EV1.route.splice(k, 0, { type: 'charge', time: e2.from, at: city, battery: btt });
 											EV1.route.splice(k, 0, { type: 'wait', time: e2.from, at: city, battery: btt });
 											continue;
