@@ -34,7 +34,7 @@ After this came the hard part - implementing a proper search algorithm. I went t
 
 After that fiasco, I immediately implemented a killcounter - whenever the script generated more than a predefined number of nodes, it would throw an exceptin and automatically terminate. This was also very useful during debugging.
 
-TThe next step was to properly animate the results of a generated solution - and this was fairly hard. Since I had practically no experience before in manipulating CANVAS elements, I had to learn the entire DOM from scratch, along with the entire implementation of animation systems. I was successful in this, leading to the animations that you can view on the final result.
+The next step was to properly animate the results of a generated solution - and this was fairly hard. Since I had practically no experience before in manipulating CANVAS elements, I had to learn the entire DOM from scratch, along with the entire implementation of animation systems. I was successful in this, leading to the animations that you can view on the final result.
 
 However, given that time was low at this point, I decided to implement an SSA so that there would be a valid solution for a given scenario, even if not perfectly optimal. This was implemented within a few hours, so I decided to move on to documentation - and here we are.
 
@@ -48,5 +48,5 @@ I would also like to thank the vehicles for driving safely and ensuring that the
 
 And of course, I'd like to thank our professors ~~without whom this project would never have happened in the first place~~.
 
-    Parth Mane
-    19MF10022
+  Parth Mane
+  19MF10022
