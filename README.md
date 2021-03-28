@@ -55,7 +55,8 @@ If you used the sample case, you may view the animation again by either clicking
 Manually entering the information is done in five steps:
 
 
-If you wish to view the path without animation, open the console and run the following code: ```js
+If you wish to view the path without animation, open the console and run the following code: 
+```js
 Object.values(info.EVs).map(vehicle => [vehicle.name, ...vehicle.route]);
 ```
 
@@ -66,6 +67,6 @@ The output of this will be a nested array, with each outer array representing a 
 - Enter in the number of vehicles and click `Set`.
 - In the fields that pop up below, enter in the information of all the vehicles. The fields are named appropriately. Note that you may need to scroll to view all the fields.
 - Once you're done, hit the `Run` button. It will begin the animation of the solution the code has found. You may re-run this animation by waiting until it ends and then again clicking `Run`.
->>>>>>> e09bb14283680dc8bde8b9914b03611955711058
+
 
 For my thought processes and approach while attempting this problem, refer to [this](THOUGHTS.md).
