@@ -22,7 +22,7 @@ The script runs on the assumption that the user input data forms a valid graph, 
 
 This script has zero external dependencies, and can be run without an internet connection after the initial download.
 
-Different files run different algorithms. These are **[heuristic.html]** (which demonstrates the heuristic function), **[simple.html]** (which runs the simple staggered algorithm), and **[index.html]** (which runs the significant times algorithm). Please note that the advanced searching algorithm is not complete.
+Different files run different algorithms. These are **heuristic.html** (which demonstrates the heuristic function), **simple.html** (which runs the simple staggered algorithm), and **index.html** (which runs the significant times algorithm). Please note that the advanced searching algorithm is not complete.
 
 ## Summary
 The project can be broken into four major parts:
@@ -38,7 +38,7 @@ b) JS - Interactivity
    
 c) JS - Algorithm
 
-   This is the core of the page - all of the processing and pathfinding occurs here. The details on how this works can be found in (here)[ALGORITHMS.md]. Functions: heuristic(), algorithm()
+   This is the core of the page - all of the processing and pathfinding occurs here. The details on how this works can be found [here](ALGORITHMS.md). Functions: heuristic(), algorithm()
    
 d) JS - Animation
 
