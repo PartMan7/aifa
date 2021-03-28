@@ -58,5 +58,11 @@ Manually entering the information is done in five steps:
 * In the fields that pop up below, enter in the information of all the vehicles. The fields are named appropriately. Note that you may need to scroll to view all the fields.
 * Once you're done, hit the `Run` button. It will begin the animation of the solution the code has found. You may re-run this animation by waiting until it ends and then again clicking `Run`.
 
+If you wish to view the path without animation, open the console and run the following code: ```js
+Object.values(info.EVs).map(vehicle => [vehicle.name, ...vehicle.route]);
+```
+
+The output of this will be a nested array, with each outer array representing a vehicle and each internal array containing every 'event' in the vehicle's path. Events may be of three types - charge, wait, and travel. The information associated with each event is also provided. Additionally, the timestamp of each event can also be seen.
+
 
 For my thought processes and approach while attempting this problem, refer to [this](THOUGHTS.md).
