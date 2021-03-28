@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<meta charset="utf8">
+<html>
+	<head>
+		<title>AIFA - #3</title>
+		<style>
+			html, body {
+				height: 100%;
+				width: 100%;
+				margin: 0;
+				padding: 0;
+			}
+
+			#container {
+				height: 500px;
+				width: 300px;
+				margin: 0;
+				padding: 0;
+				display: inline-block;
+				float: left;
+				border: 1px solid black;
+			}
+
+			#graph, #vehicles {
+				width: 30%;
+				height: 90%;
+				display: inline-block;
+				margin-top: 3%;
+				float: left;
+				text-align: center;
+				font-size: 0.8em;
+				overflow-x: scroll;
+				overflow-y: scroll;
+			}
+
+			label {
+				display: inline-block;
+				font-size: 0.8em;
+			}
+
+			input[name=edge], input[name=ev], input.inputcell {
+				width: 20px;
+				display: inline-block;
+				font-size: 0.8em;
+			}
+
+			input.nums {
+				width: 25px;
+				display: inline-block;
+				font-size: 0.8em;
+			}
+
+			input#nodenum, input#evnum {
+				width: 15px;
+			}
+
+			fieldset {
+				width: 60%;
+				margin: auto;
+			}
+
+			div.inline {
+				display: inline-block;
+				margin-left: 5px;
+				margin-right: 5px;
+			}
+		</style>
+		<script>
+			let sample = true;
+
+			const $ = (id) => document.getElementById(id);
+
+			const {sin, cos, abs, round, PI} = Math, radius = 100, colours = [
+				[ 230, 25, 75 ], [ 60, 180, 75 ],
+				[ 255, 225, 25 ], [ 67, 99, 216 ],
+				[ 245, 130, 49 ], [ 145, 30, 180 ],
+				[ 70, 240, 240 ], [ 240, 50, 230 ],
+				[ 188, 246, 12 ], [ 250, 190, 190 ],
+				[ 0, 128, 128 ], [ 230, 190, 255 ],
+				[ 154, 99, 36 ], [ 255, 250, 200 ],
+				[ 128, 0, 0 ], [ 170, 255, 195 ],
+				[ 128, 128, 0 ], [ 255, 216, 177 ],
+				[ 0, 0, 117 ], [ 128, 128, 128 ]
+			], largeNum = 10000000, frameRate = 100, aniLength = 20000;
+
+			let info = {
+				nodes: [],
+				edges: [],
+				EVs: {},
+				nodepos: {}
+			}, animation;
+
+			let ctx;
+
+			window.onload = () => {
+				ctx = $('canvas').getContext('2d');
+				ctx.lineWidth = 1;
+				ctx.textAlign = 'left';
+				sample = confirm(`Would you like to use the supplied sample case?`);
+				if (sample) {
+					info.nodes = Array.from({length: 8}).map((n, i) => `V${i + 1}`);
+					info.edges = [
+						{ from: 'V1', to: 'V2', weight: 8 },
+						{ from: 'V1', to: 'V4', weight: 4 },
+						{ from: 'V1', to: 'V5', weight: 10 },
+						{ from: 'V2', to: 'V3', weight: 4 },
+						{ from: 'V3', to: 'V4', weight: 7 },
+						{ from: 'V3', to: 'V7', weight: 6 },
+						{ from: 'V4', to: 'V5', weight: 8 },
+						{ from: 'V4', to: 'V7', weight: 6 },
+						{ from: 'V5', to: 'V6', weight: 5 },
+						{ from: 'V6', to: 'V7', weight: 1 },
+						{ from: 'V6', to: 'V8', weight: 2 },
+						{ from: 'V7', to: 'V8', weight: 5 }
+					]
+					info.EVs = {
+						"P1": {
+							"name": "P1",
+							"source": "V1",
+							"currentNode": "V1",
+							"destination": "V8",
+							"initBattery": 8,
+							"charging": 2,
+							"discharging": 4,
+							"max": 100,
+							"speed": 10,
+							"isCharging": true,
+							"route": []
+						},
+						"P2": {
+							"name": "P2",
+							"source": "V2",
+							"currentNode": "V2",
+							"destination": "V8",
+							"initBattery": 9,
+							"charging": 10,
+							"discharging": 1,
+							"max": 30,
+							"speed": 20,
+							"isCharging": false,
+							"route": []
+						},
+						"P3": {
+							"name": "P3",
+							"source": "V3",
+							"currentNode": "V3",
+							"destination": "V6",
+							"initBattery": 4,
+							"charging": 5,
+							"discharging": 20,
+							"max": 120,
+							"speed": 15,
+							"isCharging": false,
+							"route": []
+						},
+						"P4": {
+							"name": "P4",
+							"source": "V4",
+							"currentNode": "V4",
+							"destination": "V1",
+							"initBattery": 4,
+							"charging": 2,
+							"discharging": 3,
+							"max": 100,
+							"speed": 12,
+							"isCharging": false,
+							"route": []
+						}
+					}
+					run();
+				}
+			}
+
+			function draw (info, vehs, time) {
+				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+				const delta = 2 * PI / info.nodes.length;
+				info.nodepos = {};
+
+				info.nodes.forEach((node, i) => info.nodepos[node] = [150 + radius * cos(i * delta), 150 - radius * sin(i * delta)]);
+				ctx.textAlign = 'left';
+				info.edges.forEach(edge => {
+					ctx.lineWidth = 1;
+					ctx.beginPath();
+					ctx.moveTo(...info.nodepos[edge.from]);
+					ctx.lineTo(...info.nodepos[edge.to]);
+					ctx.stroke();
+				});
+
+				info.edges.forEach(edge => {
+					let midpoint = [(info.nodepos[edge.from][0] + info.nodepos[edge.to][0]) / 2, (info.nodepos[edge.from][1] + info.nodepos[edge.to][1]) / 2];
+					ctx.fillStyle = 'white';
+					ctx.beginPath();
+					ctx.arc(midpoint[0], midpoint[1], 10, 0, 2 * PI, false);
+					ctx.fill();
+					ctx.fillStyle = 'black';
+					ctx.font = '10px Arial';
+					ctx.fillText(edge.weight, midpoint[0] - (edge.weight <= 9 ? 3 : 6), midpoint[1] + 4);
+				});
+
+				Object.keys(info.nodepos).forEach(node => {
+					ctx.font = '20px Arial';
+					ctx.lineWidth = 1;
+					const coord = info.nodepos[node];
+					ctx.beginPath();
+					ctx.arc(coord[0], coord[1], 20, 0, 2 * PI, false);
+					ctx.fill();
+					ctx.beginPath();
+					ctx.fillStyle = 'white';
+					ctx.arc(coord[0], coord[1], 18, 0, 2 * PI, false);
+					ctx.fill();
+					ctx.fillStyle = 'black';
+					ctx.fillText(node, coord[0] - 12, coord[1] + 7);
+				});
+
+				if (!vehs) return;
+
+				ctx.beginPath();
+				ctx.moveTo(0, 300);
+				ctx.lineTo(300, 300);
+				ctx.stroke();
+
+				let amt = vehs.length;
+				for (let i = 1; i < amt; i++) {
+					ctx.strokeStyle = 'black';
+					ctx.beginPath();
+					ctx.moveTo(i * 300 / amt, 300);
+					ctx.lineTo(i * 300 / amt, 500);
+					ctx.stroke();
+				}
+
+				vehs.forEach((veh, index) => {
+					let last = null, rt = veh.route;
+					for (let i = 0; i < rt.length; i++) {
+						if (rt[i].time <= time) last = rt[i];
+						else break;
+					}
+					let vCoords = info.nodepos[veh.source];
+					veh.pos = veh.source;
+					if (last) switch (last.type) {
+						case 'charge': {
+							veh.isCharging = true;
+							vCoords = info.nodepos[last.at];
+							veh.pos = last.at;
+							veh.currentBattery = last.battery + (time - last.time) * veh.charging;
+							if (veh.currentBattery > veh.max) veh.currentBattery = veh.max;
+							break;
+						}
+						case 'discharge': {
+							veh.isCharging = false;
+							vCoords = info.nodepos[last.at];
+							veh.pos = last.at;
+							break;
+						}
+						case 'travel': {
+							veh.isCharging = false;
+							let onEdge = info.edges.find(edge => (edge.from === last.from && edge.to === last.to) || (edge.to === last.from && edge.from === last.to)), progress = (time - last.time) * veh.speed / onEdge.weight;
+							if (progress > 1) progress = 1;
+							veh.pos = progress >= 0.99 ? `${last.to}` : `${last.from} to ${last.to}`;
+							veh.currentBattery = last.battery - ([time - last.time, onEdge.weight / veh.speed].sort((a, b) => a - b)[0]) * veh.speed / veh.discharging;
+							if (veh.currentBattery < 0) veh.currentBattery = 0; // Rounding errors
+							vCoords = Array.from({length: 2}).map((n, i) => ((1 - progress) * info.nodepos[last.from][i] + progress * info.nodepos[last.to][i]));
+							break;
+						}
+					}
+					if (!Array.isArray(vCoords)) {
+						console.log(last, vCoords);
+						return alert(JSON.stringify(vCoords, null, '\t'));
+					}
+
+					ctx.beginPath();
+					ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+					ctx.arc(...vCoords, 10, 0, 2 * PI, false);
+					ctx.fill();
+					ctx.beginPath();
+					ctx.fillStyle = `rgba(${colours[index].join(', ')}, 0.6)`;
+					ctx.arc(...vCoords, 9, 0, 2 * PI, false);
+					ctx.fill();
+					ctx.fillStyle = 'black';
+				});
+
+				for (let i = 0; i < amt; i++) {
+					let percentage = round(vehs[i].currentBattery / vehs[i].max * 100);
+					ctx.textAlign = 'center';
+					ctx.fillStyle = `rgb(${colours[i].join(', ')})`;
+					ctx.fillRect(i * 300 / amt + 0.5, 500, 300 / amt - 0.5, -2 * percentage);
+					ctx.beginPath();
+					ctx.arc((i + 0.5) * 300 / amt, 320, 5, 0, 2 * PI, false);
+					ctx.fill();
+					ctx.beginPath();
+					ctx.fillStyle = 'white';
+					const txt = vehs[i].name;
+					ctx.font = 'bold 35px Arial';
+					ctx.fillText(txt, (i + 0.5) * 300 / amt, 360);
+					ctx.strokeText(txt, (i + 0.5) * 300 / amt, 360);
+					ctx.font = 'bold 10px Arial';
+					ctx.fillText(vehs[i].pos, (i + 0.5) * 300 / amt, 400);
+					ctx.strokeText(vehs[i].pos, (i + 0.5) * 300 / amt, 400);
+					ctx.font = 'bold 25px Arial';
+					ctx.fillText(`${percentage}%`, (i + 0.5) * 300 / amt, 440);
+					ctx.strokeText(`${percentage}%`, (i + 0.5) * 300 / amt, 440);
+					if (vehs[i].isCharging) ctx.fillText('⚡', (i + 0.5) * 300 / amt, 480);
+				}
+			}
+
+			function setnodes () {
+				let txt, num = sample ? 8 : parseInt(txt = $('nodenum').value);
+				if (isNaN(num) || num < 1) return alert(`Invalid number of nodes (${txt})`);
+				info.nodes = [];
+				for (let i = 0; i < num; i++) info.nodes.push(`V${i + 1}`);
+				let allEdges = [];
+				for (let i = 1; i <= num; i++) for (let j = i + 1; j <= num; j++) allEdges.push([i, j]);
+				$('edges').innerHTML = allEdges.map(bw => `<label for="V${bw[0]}|V${bw[1]}">V${bw[0]}-V${bw[1]}</label>: <input type="text" name="edge" id="V${bw[0]}|V${bw[1]}" value="-"	placeholder="Length" required />`).join('<br />');
+				$('edgestitle').hidden = false;
+				$('graphbuttons').hidden = false;
+				$('vehicles').style.visibility = 'hidden';
+				$('vehtitle').hidden = true;
+				$('evbuttons').hidden = true;
+			}
+
+			function generate () {
+				if (!sample) {
+					let inputs = document.getElementsByName('edge');
+					let data = {
+						nodes: info.nodes.map(node => ({id: node}))
+					}
+					info.edges = [];
+
+					for (let i = 0; i < inputs.length; i++) {
+						const edge = inputs[i];
+						if (!edge.value) return;
+						if (edge.value === '-') continue;
+						const val = parseInt(edge.value);
+						if (isNaN(val)) return alert(`[${edge.id.split('|').join('-')}] ${edge.value} is not a valid number.`);
+						let coords = edge.id.split('|');
+						info.edges.push({ from: coords[0], to: coords[1], weight: val });
+					}
+					data.edges = info.edges;
+					info.EVs = {};
+				}
+
+				$('vehicles').style.visibility = 'visible';
+				draw(info);
+			}
+
+			function setevs () {
+				let txt, num = sample ? 4 : parseInt(txt = $('evnum').value);
+				if (!sample) {
+					if (isNaN(num) || num < 1) return alert(`Invalid number of vehicles (${txt})`);
+					info.EVs = {};
+					for (let i = 0; i < num; i++) info.EVs[`P${i + 1}`] = {};
+				}
+				$('evs').innerHTML = Object.keys(info.EVs).map(ev => `<fieldset><legend>${ev}</legend><div class="inline"><label for="${ev}source">Source</label>: <input type="text" list="${ev}sourcelist" id="${ev}source" class="inputcell" required /><datalist id="${ev}sourcelist">${info.nodes.map(node => `<option value="${node}" />`).join('')}</datalist></div><div class="inline"><label for="${ev}dest">Target</label>: <input type="text" list="${ev}destlist" id="${ev}dest" class="inputcell" required /><datalist id="${ev}destlist">${info.nodes.map(node => `<option value="${node}" />`).join('')}</datalist></div><br /><div class="inline"><label for="${ev}speed">Speed</label>: <input type="text" id="${ev}speed" class="nums" required /></div><br /><div class="inline"><label for="${ev}max">Battery Capacity</label>: <input type="text" id="${ev}max" class="nums" required /></div><div class="inline"><label for="${ev}init">Current Battery</label>: <input type="text" id="${ev}init" class="nums" required /></div><br /><div class="inline"><label for="${ev}charge">Charging Rate</label>: <input type="text" id="${ev}charge" class="nums" required /></div><div class="inline"><label for="${ev}discharge">Discharging Rate</label>: <input type="text" id="${ev}discharge" class="nums" required /></div></fieldset>`).join('<br />');
+				$('vehtitle').hidden = false;
+				$('evbuttons').hidden = false;
+			}
+
+			function heuristic (graph, EVs, animated) {
+				
+				// This heuristic function simply solves the case when the constraint of only one car per
+				// station is removed. It uses Dijkstra's algorithm to find the minimum time in this case, 
+				// since with the constraint removed, every car's optimal path can be calculated independently.
+				// The heuristic value is simply the maximum of the optimal times for each car.
+
+				return Object.keys(EVs).map(car => {
+					let EV = EVs[car];
+					const maxDist = EV.max * EV.discharging;
+
+					// Start Dijkstra
+					const distances = {}, parents = {}, iterate = [];
+					Object.keys(graph).forEach(city => {
+						distances[city] = largeNum;
+						iterate.push(city);
+					});
+					distances[EV.currentNode] = 0;
+					parents[EV.currentNode] = null;
+					while (iterate.length) {
+						let min = largeNum + 1, minCity = null;
+						iterate.forEach(city => {
+							let dist = distances[city];
+							if (dist < min) {
+								min = dist;
+								minCity = city;
+							}
+						});
+						iterate.splice(iterate.indexOf(minCity), 1);
+						Object.keys(graph[minCity]).forEach(nCity => {
+							if (graph[minCity][nCity] > maxDist) return; // Ignore edges that are too long
+							let upd = min + graph[minCity][nCity];
+							if (upd < distances[nCity]) {
+								distances[nCity] = upd;
+								parents[nCity] = minCity;
+							}
+						});
+					}
+					let chain = [EV.destination]; // Get Dijkstra's optimal path
+					while (parents[chain[0]]) chain.unshift(parents[chain[0]]);
+					let time = 0;
+					time += distances[EV.destination] / EV.speed; // Transport time
+					let requiredBattery = distances[EV.destination] / EV.discharging - EV.currentBattery;
+					time += requiredBattery / EV.charging; // Required charging time
+					if (animated) {
+						// generate route for animation purposes
+						let lN = null, cT = 0, cB = EV.initBattery;
+						chain.forEach(node => {
+							if (node === chain[0]) return lN = node;
+							let reqBat = graph[node][lN] / EV.discharging;
+							if (reqBat > cB) {
+								EV.route.push({type: 'charge', at: lN, time: cT, battery: cB});
+								cT += (reqBat - cB) / EV.charging;
+								cB = reqBat;
+								EV.route.push({type: 'discharge', at: lN, time: cT, battery: cB});
+							}
+							EV.route.push({type: 'travel', from: lN, to: node, time: cT, battery: cB});
+							cT += graph[node][lN] / EV.speed;
+							cB -= reqBat;
+							lN = node;
+						});
+					}
+					return time;
+				}).reduce((a, b) => a < b ? b : a, 0);
+			}
+
+			function run () {
+				if (!sample) {
+					for (let i = 0; i < Object.keys(info.EVs).length; i++) {
+						let label = `P${i + 1}`;
+						info.EVs[label] = {route: []};
+						let EV = info.EVs[label];
+						EV.source = $(`${label}source`).value.trim();
+						EV.currentNode = EV.source;
+						EV.destination = $(`${label}dest`).value.trim();
+						EV.currentBattery = EV.initBattery = abs(parseFloat($(`${label}init`).value.trim()));
+						EV.charging = abs(parseFloat($(`${label}charge`).value.trim()));
+						EV.discharging = abs(parseFloat($(`${label}discharge`).value.trim()));
+						EV.max = abs(parseFloat($(`${label}max`).value.trim()));
+						EV.speed = abs(parseFloat($(`${label}speed`).value.trim()));
+						EV.name = label;
+						if (['source', 'destination'].find(t => !info.nodes.includes(EV[t]))) return alert(`Invalid source / destination [${label}]`);
+						if (['initBattery', 'charging', 'discharging', 'max', 'speed'].find(t => isNaN(EV[t]))) return alert(`Invalid quantity value in [${label}]`);
+					}
+				}
+
+				// generate graph
+				const graph = {};
+				info.nodes.forEach(node => graph[node] = {});
+				info.edges.forEach(edge => {
+					graph[edge.from][edge.to] = edge.weight;
+					graph[edge.to][edge.from] = edge.weight;
+				});
+
+				heuristic(graph, info.EVs, true);
+				animate(info);
+			}
+
+			function animate (inf) {
+				let lastTime = Object.values(inf.EVs).reduce((acc, cur) => {
+					if (!cur.route.length) return acc;
+					let lastNode = cur.route[cur.route.length - 1], temp = lastNode.time;
+					if (lastNode.type === 'travel') temp += inf.edges.find(edge => (edge.from === lastNode.from && edge.to === lastNode.to) || (edge.to === lastNode.from && edge.from === lastNode.to)).weight / cur.speed;
+					return acc > temp ? acc : temp;
+				}, 0);
+				let _time = 0;
+				animation = setInterval(() => {
+				draw(inf, Object.values(inf.EVs), _time++ * lastTime * 1000 / aniLength / frameRate);
+					if (_time * 1000 > aniLength * frameRate) clearInterval(animation);
+				}, 1 / frameRate);
+			}
+		</script>
+	</head>
+	<body>
+		<div id="container"><canvas id="canvas" width="300px" height="500px">Unsupported browser, please update</canvas></div>
+		<div id="graph">
+			<h2>Nodes</h2>
+			How many nodes does the graph have? <input type="text" id="nodenum" value="5" placeholder="#" required />&nbsp;&nbsp;<button onclick="setnodes()">Set</button>
+			<br />
+			<h2 id="edgestitle" hidden>Edges</h2>
+			<div id="edges"></div>
+			<br />
+			<span id="graphbuttons" hidden><button name="Generate!" onclick="generate()">Generate map!</button></span>
+		</div>
+		<div id="vehicles" style="visibility: hidden;">
+			<h2>Vehicles</h2>
+			How many vehicles does the simulation have? <input type="text" id="evnum" value="3" placeholder="#" required />&nbsp;&nbsp;<button onclick="setevs()">Set</button>
+			<br />
+			<h2 id="vehtitle" /*hidden*/>Details</h2>
+			<div id="evs">
+			</div>
+			<br />
+			<span id="evbuttons" hidden><button name="run" onclick="run()">Run simulation!</button></span>
+		</div>
+	</body>
+</html>
