@@ -503,21 +503,21 @@
 								} else {
 									// Second vehicle charges
 									let switchFlag = false;
+									delta = e2.to - e2.from;
 									for (let k = 0; k < EV1.route.length; k++) {
 										let evt = EV1.route[k];
 										if (evt.time < e2.from) continue;
-										if (evt.time >= e2.from) {
-											if (!switchFlag) {
-												switchFlag = true;
-												let btt = evt.battery;
-												btt += EV1.charging * e2.from - evt.time;
-												EV1.route.splice(k, 0, { type: 'charge', time: e2.to, at: city, battery: btt });
-												EV1.route.splice(k, 0, { type: 'wait', time: e2.from, at: city, battery: btt });
-											}
+										if (!switchFlag) {
+											switchFlag = k;
+											let btt = evt.battery;
+											btt += EV1.charging * e2.from - evt.time;
+											EV1.route.splice(k, 0, { type: 'charge', time: e2.from, at: city, battery: btt });
+											EV1.route.splice(k, 0, { type: 'wait', time: e2.from, at: city, battery: btt });
 											continue;
 										}
 										evt.time += delta;
 									}
+									// EV1.route.sort((a, b) => a.time - b.time);
 								}
 								continue stagger;
 							}
