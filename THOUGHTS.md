@@ -8,6 +8,13 @@ However, it is very easy to point out multiple cases in which this would not be 
 
 The STA runs by converting a continuous quantity (time to spend charging at a station) into a discrete quantity (time required in charging to given cost) by imposing a single constraint: vehicles will only charge enough to travel along a given edge. While this does result in a slight loss in optimality (for example, if a vehicle could have the optimal path by charging 15 on two cities to cover three edges costing 10 battery each), it is far more advanced than the previously mentioned SSA.
 
+Here, we define state changes - we can have state changes of the following types: 
+a. TRAVEL FROM node_1 TO node_2
+b. WAIT AT node_1 FOR time
+c. CHARGE AT node_1 FOR time
+
+And with these cases we iterate.
+
 However, the STA has significant costs - not only is there a large amount of nodes that are constantly being explored, but there is also a vast amount of data associated with each state. Here, a state is defined as the configuration of the vehicles - since the cities / edges do not change, our graph remains constant. To represent the state, each vehicle has the following attributes recorded: specified vehicle properties (such as speed and maximum battery capacity), current battery, current position, and status. Since these states are all separate from each other, changes in one should not affect the others - but since these are objects, we need to first clone the state to generate a new one. The problems of both state storage and state references are somewhat addressed by a STATE object that provides methods for both parsing and serialization (ie, converting state to and from a string). This was written from scratch by me, and is over a dozen times faster than JavaScript's internal JSON serializer.
 
 With state storage and desync now addressed, we now have another question - in each state, some vehicles are in motion while others are charging. However, if we simply pass the state at the end of the edge charge into our open queue, we will have vehicles that are frozen in time between these states. To address this, I added a timeTravel function that operates on the beginning of the provided state, and converts it to the *next significant state in time* instead of directly parsing the traveled edge.

@@ -460,7 +460,7 @@
 							}
 						});
 					});
-					// Handle overlaps
+					// Handle overlaps; ie when two vehicles try to charge at the same time
 					let flag = true;
 					for (let x = 0; x < cities.length; x++) {
 						let city = cities[x];
@@ -516,7 +516,6 @@
 										}
 										evt.time += delta;
 									}
-									// EV1.route.sort((a, b) => a.time - b.time);
 								}
 								continue stagger;
 							}
@@ -546,7 +545,7 @@
 					}
 				}
 				clearInterval(animation);
-				// generate graph
+				// Generate graph
 				const graph = {};
 				info.nodes.forEach(node => graph[node] = {});
 				info.edges.forEach(edge => {
