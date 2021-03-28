@@ -714,7 +714,7 @@
 								timeTravel(clone);
 								let tempG = current.g + dTime, tempH = heuristic(graph, clone), tempF = tempG + tempH;
 								console.log(JSON.stringify(graph));
-								console.log(JSON.stirngify(clone));
+								console.log(JSON.stringify(clone));
 								console.log(tempH, 2);
 								open.add({ state: STATE.stringify(clone), f: tempF, g: tempG, parent: current });
 							}
