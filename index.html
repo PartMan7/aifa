@@ -142,29 +142,28 @@
 					this._IDs = new Set(this._values.map(val => val[this.id]));
 					this.length = this._values.length;
 				}
-				add (...nodes) {
-					nodes.forEach(node => {
-						if (node[this.id] == null) throw new Error(`Missing valid ID on node [${node}]`);
-						if (this._IDs.has(node[this.id])) {
-							let found = this._values.find(val => val[this.id] === node[this.id]);
-							if (found.g > node.g) {
-								found.g = node.g;
-								found.parent = node.parent;
-								found.f = node.f;
-							}
-							return;
+				add (node) {
+					if (node[this.id] == null) throw new Error(`Missing valid ID on node [${node}]`);
+					if (this._IDs.has(node[this.id])) {
+						let found = this._values.find(val => val[this.id] === node[this.id]);
+						if (found.g > node.g) {
+							found.g = node.g;
+							found.parent = node.parent;
+							found.f = node.f;
+							return true;
 						}
-						this._IDs.add(node[this.id]);
-						let key = node[this.key], i, flag = true;
-						loop: for (i = 0; i < this.length; i++) if (this._values[i][this.key] >= key) {
-							flag = false;
-							break loop;
-						}
-						if (flag) this._values.push(node);
-						else this._values.splice(i, 0, node);
-						this.length++;
-					});
-					return this.length;
+						return false;
+					}
+					this._IDs.add(node[this.id]);
+					let key = node[this.key], i, flag = true;
+					loop: for (i = 0; i < this.length; i++) if (this._values[i][this.key] >= key) {
+						flag = false;
+						break loop;
+					}
+					if (flag) this._values.push(node);
+					else this._values.splice(i, 0, node);
+					this.length++;
+					return true;
 				}
 				remove (...nodes) {
 					nodes.forEach(node => {
@@ -204,7 +203,7 @@
 				nodepos: {}
 			}, animation;
 
-			let ctx, open, killer = 0;
+			let ctx, open, parents, killer = 0;
 
 			window.onload = () => {
 				ctx = $('canvas').getContext('2d');
@@ -212,8 +211,9 @@
 				ctx.textAlign = 'left';
 				sample = confirm(`Would you like to use the supplied sample case?`);
 				if (sample) {
-					info.nodes = Array.from({ length: /* 8 */ 4 }).map((n, i) => `V${i + 1}`);
-					/*info.edges = [
+					let caseNum = 1;
+					info.nodes = Array.from({ length: [8, 4, 2][caseNum] }).map((n, i) => `V${i + 1}`);
+					info.edges = [[
 						{ from: 'V1', to: 'V2', weight: 8 },
 						{ from: 'V1', to: 'V4', weight: 4 },
 						{ from: 'V1', to: 'V5', weight: 10 },
@@ -226,15 +226,18 @@
 						{ from: 'V6', to: 'V7', weight: 1 },
 						{ from: 'V6', to: 'V8', weight: 2 },
 						{ from: 'V7', to: 'V8', weight: 5 }
-					]*/
-					info.edges = [
+					],
+					[
 						{ from: 'V1', to: 'V2', weight: 6 },
 						{ from: 'V1', to: 'V3', weight: 5 },
 						{ from: 'V1', to: 'V4', weight: 3 },
 						{ from: 'V2', to: 'V3', weight: 4 },
 						{ from: 'V3', to: 'V4', weight: 7 }
-					]
-					/*info.EVs = {
+					],
+					[
+						{ from: 'V1', to: 'V2', weight: 10 }
+					]][caseNum];
+					info.EVs = [{
 						"P1": {
 							"name": "P1",
 							"source": "V1",
@@ -287,13 +290,13 @@
 							"isCharging": '',
 							"route": []
 						}
-					}*/
-					info.EVs = {
+					},
+					{
 						"P1": {
 							"name": "P1",
 							"source": "V1",
 							"pos": "V1",
-							"destination": "V8",
+							"destination": "V3",
 							"initBattery": 8,
 							"charging": 2,
 							"discharging": 4,
@@ -306,7 +309,7 @@
 							"name": "P2",
 							"source": "V2",
 							"pos": "V2",
-							"destination": "V8",
+							"destination": "V3",
 							"initBattery": 9,
 							"charging": 10,
 							"discharging": 1,
@@ -315,7 +318,22 @@
 							"isCharging": '',
 							"route": []
 						}
-					}
+					},
+					{
+						P1: {
+							name: 'P1',
+							source: 'V1',
+							pos: 'V1',
+							destination: 'V2',
+							initBattery: 2,
+							max: 20,
+							charging: 1,
+							discharging: 1,
+							speed: 1,
+							isCharging: '',
+							route: []
+						}
+					}][caseNum]
 					run();
 				}
 			}
@@ -592,9 +610,7 @@
 				// words, it simply takes a given node state and finds the next node where a choice can be made. Note that this does not
 				// include edge-fractinoal charge times, since we quantize time into discrete pieces by simply considering charging times
 				// of only required segments. This function is mutating.
-				if (killer++ > 20) throw new Error ('');
-				console.log('===========');
-				console.log(input.map(vehString));
+				if (killer++ > 20000) throw new Error ('');
 				let min = largeNum, veh;
 				for (let i = 0; i < input.length; i++) {
 					let EV = input[i];
@@ -645,8 +661,6 @@
 						else EV.status.time -= min;
 					}
 				});
-				console.log(input.map(vehString));
-				console.log('===========');
 				return;
 			}
 
@@ -657,9 +671,10 @@
 				// to return a valid solution for any solvable case, for a minuscule amount of cases the path will not be optimal.
 
 				// Standard A-star code
-				open = new queue([{ state: STATE.stringify(EVs), f: 0, g: 0, parent: null }]);
+				open = new queue([{ state: STATE.stringify(EVs), f: 0, g: 0}]);
+				parents = {};
 
-				// Node structure: state<vehicle_info>, f<f_value>, g<g_value>, parent<parent_node>
+				// Node structure: state<vehicle_info>, f<f_value>, g<g_value>
 				
 				while (open.length) {
 					let current = open.shift();
@@ -668,7 +683,10 @@
 					if (unpack.reduce((acc, veh) => acc && veh.pos === veh.destination, true)) {
 						// Goal state
 						// Run route calculations
-						console.log(open);
+						console.log(unpack);
+						let chain = [current.state];
+						while (parents[chain[0]]) chain.unshift(parents[chain[0]]);
+						console.log(chain);
 						return;
 					}
 					unpack.forEach((veh, idx) => {
@@ -684,8 +702,8 @@
 								time: delt
 							}
 							timeTravel(clone);
-							let tempG = current.g + delt, tempH = heuristic(graph, clone), tempF = tempG + temH;
-							open.add({ state: STATE.stringify(clone), f: tempF, g: tempG, parent: current });
+							let tempG = current.g + delt, tempH = heuristic(graph, clone), tempF = tempG + temH, tempState = STATE.stringify(clone);
+							if (open.add({ state: tempState, f: tempF, g: tempG, parent: current.state })) parents[tempState] = current.state;
 						}
 						Object.keys(graph[pos]).forEach(n1 => {
 							if (aMax < graph[pos][n1]) return;
@@ -700,23 +718,19 @@
 									time: deltaTime
 								}
 								timeTravel(clone);
-								let tempG = current.g + deltaTime, tempH = heuristic(graph, clone), tempF = tempG + tempH;
-								console.log(tempH, 1);
-								open.add({ state: STATE.stringify(clone), f: tempF, g: tempG, parent: current });
+								let tempG = current.g + deltaTime, tempH = heuristic(graph, clone), tempF = tempG + tempH, tempState = STATE.stringify(clone);
+								if (open.add({ state: tempState, f: tempF, g: tempG, parent: current.state })) parents[tempState] = current.state;
 							}
 							else if (canCharge) {
 								// Child of the state where the vehicle charges for a 'significant' time interval
 								let dTime = (graph[pos][n1] / veh.discharging - veh.currentBattery) / veh.charging;
 								clone[idx].status = {
-									type: 'w',
+									type: 'c',
 									time: dTime
 								}
 								timeTravel(clone);
-								let tempG = current.g + dTime, tempH = heuristic(graph, clone), tempF = tempG + tempH;
-								console.log(JSON.stringify(graph));
-								console.log(JSON.stringify(clone));
-								console.log(tempH, 2);
-								open.add({ state: STATE.stringify(clone), f: tempF, g: tempG, parent: current });
+								let tempG = current.g + dTime, tempH = heuristic(graph, clone), tempF = tempG + tempH, tempState = STATE.stringify(clone);
+								if (open.add({ state: tempState, f: tempF, g: tempG, parent: current.state })) parents[tempState] = current.state;
 							}
 						});
 					});
