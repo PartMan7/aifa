@@ -33,6 +33,18 @@
 				overflow-y: scroll;
 			}
 
+			#sampleRun {
+				position: absolute;
+				width: 300px;
+				display: inline-block;
+				top: 510px;
+				left: 0px;
+				text-align: center;
+				font-size: 0.8em;
+				overflow-x: scroll;
+				overflow-y: scroll;
+			}
+
 			label {
 				display: inline-block;
 				font-size: 0.8em;
@@ -333,7 +345,9 @@
 							isCharging: '',
 							route: []
 						}
-					}][caseNum]
+					}][caseNum];
+					$('graph').style.visibility = 'hidden';
+					$('sampleRun').style.visibility = 'visible';
 					run();
 				}
 			}
@@ -794,6 +808,8 @@
 			}
 
 			function animate (inf) {
+				$('runButton').disabled = true;
+				$('usrRun').disabled = true;
 				let lastTime = Object.values(inf.EVs).reduce((acc, cur) => {
 					if (!cur.route.length) return acc;
 					let lastNode = cur.route[cur.route.length - 1], temp = lastNode.time;
@@ -803,7 +819,11 @@
 				let _time = 0;
 				animation = setInterval(() => {
 				draw(inf, Object.values(inf.EVs), _time++ * lastTime * 1000 / aniLength / frameRate);
-					if (_time * 1000 > aniLength * frameRate) clearInterval(animation);
+					if (_time * 1000 > aniLength * frameRate) {
+						clearInterval(animation);
+						$('runButton').disabled = false;
+						$('usrRun').disabled = false;
+					}
 				}, 1 / frameRate);
 			}
 		</script>
@@ -827,7 +847,10 @@
 			<div id="evs">
 			</div>
 			<br />
-			<span id="evbuttons" hidden><button name="run" onclick="run()">Run simulation!</button></span>
+			<span id="evbuttons" hidden><button name="run" id="usrRun" onclick="run()">Run simulation!</button></span>
+		</div>
+		<div id="sampleRun" style="visibility: hidden;">
+			<button id="runButton" onclick="run()">Run!</button>
 		</div>
 	</body>
 </html>
