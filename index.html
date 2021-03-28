@@ -203,7 +203,7 @@
 				nodepos: {}
 			}, animation;
 
-			let ctx, open, parents, killer = 0;
+			let ctx, open, parents, nodeAmt = 0;
 
 			window.onload = () => {
 				ctx = $('canvas').getContext('2d');
@@ -326,7 +326,7 @@
 							pos: 'V1',
 							destination: 'V2',
 							initBattery: 2,
-							max: 20,
+							max: 10,
 							charging: 1,
 							discharging: 1,
 							speed: 1,
@@ -606,11 +606,16 @@
 			}
 
 			function timeTravel (input) {
+				const log = false;
 				// Somewhat unorthodox function. Effectively, it travels through time to generate the next 'significant' node. In simpler
 				// words, it simply takes a given node state and finds the next node where a choice can be made. Note that this does not
 				// include edge-fractinoal charge times, since we quantize time into discrete pieces by simply considering charging times
 				// of only required segments. This function is mutating.
-				if (killer++ > 20000) throw new Error ('');
+				if (nodeAmt++ > 20000) throw new Error (`Exceeded node limit [${nodeAmt} nodes explored]. Process killed.`);
+				if (log) {
+					console.log('===');
+					console.log(input.map(vehString));
+				}
 				let min = largeNum, veh;
 				for (let i = 0; i < input.length; i++) {
 					let EV = input[i];
@@ -661,6 +666,10 @@
 						else EV.status.time -= min;
 					}
 				});
+				if (log) {
+					console.log(input.map(vehString));
+					console.log('===');
+				}
 				return;
 			}
 
@@ -686,7 +695,7 @@
 						console.log(unpack);
 						let chain = [current.state];
 						while (parents[chain[0]]) chain.unshift(parents[chain[0]]);
-						console.log(chain);
+						console.log(chain.map(r => STATE.parse(r).map(vehString)));
 						return;
 					}
 					unpack.forEach((veh, idx) => {
@@ -717,9 +726,13 @@
 									to: n1,
 									time: deltaTime
 								}
+								let initState = STATE.stringify(clone);
 								timeTravel(clone);
 								let tempG = current.g + deltaTime, tempH = heuristic(graph, clone), tempF = tempG + tempH, tempState = STATE.stringify(clone);
-								if (open.add({ state: tempState, f: tempF, g: tempG, parent: current.state })) parents[tempState] = current.state;
+								if (open.add({ state: tempState, f: tempF, g: tempG, parent: current.state })) {
+									parents[initState] = current.state;
+									parents[tempState] = initState;
+								}
 							}
 							else if (canCharge) {
 								// Child of the state where the vehicle charges for a 'significant' time interval
@@ -728,13 +741,19 @@
 									type: 'c',
 									time: dTime
 								}
+								let initState = STATE.stringify(clone);
 								timeTravel(clone);
 								let tempG = current.g + dTime, tempH = heuristic(graph, clone), tempF = tempG + tempH, tempState = STATE.stringify(clone);
-								if (open.add({ state: tempState, f: tempF, g: tempG, parent: current.state })) parents[tempState] = current.state;
+								if (open.add({ state: tempState, f: tempF, g: tempG, parent: current.state })) {
+									parents[initState] = current.state;
+									parents[tempState] = initState;
+								}
 							}
 						});
 					});
 				}
+
+				return alert('No solution');
 			}
 
 			function run () {
@@ -765,7 +784,11 @@
 					graph[edge.to][edge.from] = edge.weight;
 				});
 
-				Object.values(info.EVs).forEach(EV => EV.status = { type: 'w', time: 0 });
+				Object.values(info.EVs).forEach(EV => {
+					EV.status = { type: 'w', time: 0 };
+					EV.currentBattery = EV.initBattery;
+				});
+				info.graph = graph;
 				algorithm(graph, Object.values(info.EVs));
 				animate(info);
 			}
